@@ -1,0 +1,56 @@
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  --nw-bg: #0b0c0e;
+  --nw-panel: #12131a;
+  --nw-gold: #c6a675;
+  --nw-gold-soft: #b4935b;
+  --nw-parchment-soft: #f8f3e6;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Global base */
+body {
+  margin: 0;
+  background-color: var(--nw-bg);
+  color: var(--nw-parchment-soft);
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* New World title font */
+.nw-title {
+  font-family: "Cinzel", "Times New Roman", serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* Obsidian + vignette background */
+.nw-bg {
+  background:
+    radial-gradient(circle at top, #1f2933 0, rgba(15, 23, 42, 0.1) 40%, #020309 90%),
+    radial-gradient(circle at bottom, #111827 0, #020309 65%);
+}
+
+/* Panel styling: beveled, gold-trimmed */
+.nw-panel {
+  background:
+    radial-gradient(circle at top left, rgba(248, 250, 252, 0.06) 0, transparent 40%),
+    radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.85) 0, #050609 55%);
+  border-radius: 0.85rem;
+  border: 1px solid rgba(198, 166, 117, 0.5);
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
