@@ -285,7 +285,7 @@ const formatCSVName = (file: string) => {
   }, [players]);
 
 // ============================
-// COMPONENT: CLASS COMPARISON (WITH HEATMAP)
+// COMPONENT: CLASS COMPARISON (AUTO STAT SELECTION)
 // ============================
 function ClassComparison({ players }) {
   const [selectedClass, setSelectedClass] = useState("BRUISER");
@@ -305,39 +305,48 @@ function ClassComparison({ players }) {
     "UNKNOWN",
   ];
 
+  // 🌟 AUTO-DETECT PRIMARY STAT
+  const primaryStat =
+    selectedClass === "HEALS"
+      ? "Healing"
+      : selectedClass === "TANK"
+      ? "Healing" // fallback until Damage Taken exists
+      : "Damage";
+
+  // Filter by class
   const filtered = players
     .filter((p) => p.buildType === selectedClass)
-    .sort((a, b) => b.Damage - a.Damage);
+    .sort((a, b) => b[primaryStat] - a[primaryStat]);
 
-  // Column extract helpers
+  // Column data
   const kills = filtered.map((p) => p.Kills);
   const deaths = filtered.map((p) => p.Deaths);
   const assists = filtered.map((p) => p.Assists);
   const dmg = filtered.map((p) => p.Damage);
+  const healing = filtered.map((p) => p.Healing);
   const kp = filtered.map((p) => p.KP);
 
-  // get min/max for each stat inside the selected class
+  // Heat ranges
   const colMinMax = {
     Kills: [Math.min(...kills), Math.max(...kills)],
     Deaths: [Math.min(...deaths), Math.max(...deaths)],
     Assists: [Math.min(...assists), Math.max(...assists)],
     Damage: [Math.min(...dmg), Math.max(...dmg)],
+    Healing: [Math.min(...healing), Math.max(...healing)],
     KP: [Math.min(...kp), Math.max(...kp)],
   };
 
-  // function to convert stat value → heat color
+  // Heat color
   const heat = (value, [min, max]) => {
-    if (max === min) return "hsl(0, 0%, 25%)"; // flat values
+    if (max === min) return "hsl(0, 0%, 20%)";
     const pct = (value - min) / (max - min);
-    return `hsl(${pct * 120}, 55%, 30%)`; // softened red→green
-
+    return `hsl(${pct * 120}, 40%, 28%)`; // muted red→green NW-style
   };
 
   return (
     <section className="nw-panel p-4 mt-8 rounded-xl shadow-nw">
-
       <h2 className="nw-title text-sm md:text-lg text-nw-gold-soft mb-4">
-        Class Comparison
+        Class Comparison (Sorted by {primaryStat})
       </h2>
 
       {/* SELECTOR */}
@@ -350,21 +359,15 @@ function ClassComparison({ players }) {
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
           className="px-3 py-2 text-sm rounded border border-nw-gold/60"
-          style={{
-            backgroundColor: "#2a2620",
-            color: "#f8f3e6",
-          }}
+          style={{ backgroundColor: "#2a2620", color: "#f8f3e6" }}
         >
-          {classOptions.map((c) => (
+          {classOptions.map((cls) => (
             <option
-              key={c}
-              value={c}
-              style={{
-                backgroundColor: "#1a1815",
-                color: "#f8f3e6",
-              }}
+              key={cls}
+              value={cls}
+              style={{ backgroundColor: "#1a1815", color: "#f8f3e6" }}
             >
-              {c}
+              {cls}
             </option>
           ))}
         </select>
@@ -380,6 +383,7 @@ function ClassComparison({ players }) {
               <th className="px-3 py-2 text-left">Deaths</th>
               <th className="px-3 py-2 text-left">Assists</th>
               <th className="px-3 py-2 text-left">Damage</th>
+              <th className="px-3 py-2 text-left">Healing</th>
               <th className="px-3 py-2 text-left">KP%</th>
             </tr>
           </thead>
@@ -387,10 +391,8 @@ function ClassComparison({ players }) {
           <tbody>
             {filtered.map((p, i) => (
               <tr key={i} className="border-t border-nw-gold/10 hover:bg-white/5">
-
                 <td className="px-3 py-2 font-medium">{p.Player}</td>
 
-                {/* KILLS */}
                 <td
                   className="px-3 py-2 font-semibold"
                   style={{ backgroundColor: heat(p.Kills, colMinMax.Kills) }}
@@ -398,7 +400,7 @@ function ClassComparison({ players }) {
                   {p.Kills}
                 </td>
 
-                {/* DEATHS (lower is better → invert the scale) */}
+                {/* inverted (lower deaths = greener) */}
                 <td
                   className="px-3 py-2 font-semibold"
                   style={{
@@ -411,7 +413,6 @@ function ClassComparison({ players }) {
                   {p.Deaths}
                 </td>
 
-                {/* ASSISTS */}
                 <td
                   className="px-3 py-2 font-semibold"
                   style={{ backgroundColor: heat(p.Assists, colMinMax.Assists) }}
@@ -427,6 +428,14 @@ function ClassComparison({ players }) {
                   {p.Damage.toLocaleString()}
                 </td>
 
+                {/* HEALING */}
+                <td
+                  className="px-3 py-2 font-semibold"
+                  style={{ backgroundColor: heat(p.Healing, colMinMax.Healing) }}
+                >
+                  {p.Healing.toLocaleString()}
+                </td>
+
                 {/* KP% */}
                 <td
                   className="px-3 py-2 font-semibold"
@@ -434,7 +443,6 @@ function ClassComparison({ players }) {
                 >
                   {p.KP.toFixed(1)}%
                 </td>
-
               </tr>
             ))}
           </tbody>
@@ -443,6 +451,7 @@ function ClassComparison({ players }) {
     </section>
   );
 }
+
 
 const [csvFiles, setCsvFiles] = useState<string[]>([]);
 
