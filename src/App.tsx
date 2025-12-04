@@ -1,12 +1,4 @@
-// Mercguards War Dashboard – New World Theme (Corrected CSV Parser)
-// This version fixes:
-// - Column explosion (Player_1, Kills_1, ...)
-// - Whitelists proper CSV columns
-// - Correct build handling
-// - Correct KP % handling
-// - Authoritative Group column
-// - No duplicate or malformed columns
-// - Improved readability
+// Mercguards War Dashboard – Consolidated & Mobile-Safe Version
 
 import { useState, useEffect, useRef } from "react";
 import Papa from "papaparse";
@@ -18,16 +10,12 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   LineChart,
   Line,
   CartesianGrid,
-  Legend,
 } from "recharts";
 
-// Allowed columns – everything else is ignored
+// Allowed CSV columns
 const VALID_COLUMNS = [
   "Rank",
   "Group",
@@ -45,6 +33,7 @@ const VALID_COLUMNS = [
   "Result",
 ];
 
+// Build types
 type Build =
   | "FLAIL"
   | "QDPS"
@@ -80,7 +69,7 @@ interface EnhancedPlayer extends Player {
   buildType: Build;
 }
 
-// Authoritative build ordering for group rows
+// Build priority for group sorting
 const BUILD_PRIORITY: Record<string, number> = {
   BRUISER: 1,
   DISRUPTOR: 2,
@@ -95,7 +84,7 @@ const BUILD_PRIORITY: Record<string, number> = {
   UNKNOWN: 11,
 };
 
-// Color theme for builds
+// Build colors
 const buildColors: Record<Build, string> = {
   FLAIL: "#c4a26a",
   QDPS: "#ff4d4d",
@@ -111,12 +100,9 @@ const buildColors: Record<Build, string> = {
   UNKNOWN: "#9ca3af",
 };
 
-//////////////////////////////////////////////////////////////
-// BUILD DETECTION
-//////////////////////////////////////////////////////////////
+// Build detection
 const detectBuild = (raw: string): Build => {
   if (!raw) return "UNKNOWN";
-
   const s = raw.toLowerCase();
 
   if (s.includes("flail")) return "FLAIL";
@@ -126,20 +112,16 @@ const detectBuild = (raw: string): Build => {
   if (s.includes("bb") || s.includes("blunder")) return "BBX";
   if (s.includes("vg") || s.includes("void") || s.includes("ig")) return "VGIG";
   if (s.includes("fs") || s.includes("fire")) return "FSX";
-  if (s.includes("dex") || s.includes("bow") || s.includes("musket"))
-    return "DEX";
-  if (s.includes("cw") || s.includes("crescent wave")) return "CW";
+  if (s.includes("dex") || s.includes("bow") || s.includes("musket")) return "DEX";
+  if (s.includes("cw")) return "CW";
   if (s.includes("heal")) return "HEALS";
   if (s.includes("tank")) return "TANK";
 
   return "UNKNOWN";
 };
 
-//////////////////////////////////////////////////////////////
-// CSV PARSER – CLEAN & STRICT
-//////////////////////////////////////////////////////////////
+// CSV cleaner
 const normalizeCSVRow = (row: any): Player | null => {
-  // The CSV may include garbage keys; keep only whitelist
   const cleaned: any = {};
 
   for (const key of Object.keys(row)) {
@@ -149,14 +131,12 @@ const normalizeCSVRow = (row: any): Player | null => {
     }
   }
 
-  // Must have player name
   if (!cleaned.Player) return null;
 
-  // Parse numeric values safely
   const num = (v: any) =>
     Number(String(v || "0").replace(/,/g, "").replace("%", "")) || 0;
 
-  const p: Player = {
+  return {
     Rank: num(cleaned.Rank),
     Group: num(cleaned.Group),
     Build: String(cleaned.Build || "").trim(),
@@ -171,12 +151,10 @@ const normalizeCSVRow = (row: any): Player | null => {
     Attacker: cleaned.Attacker ? String(cleaned.Attacker).trim() : "",
     Result: cleaned.Result ? String(cleaned.Result).trim() : "",
   };
-
-  return p;
 };
 
 // ============================
-// SIDE MENU — Dashboard / Analytics + War List
+// DESKTOP SIDEMENU
 // ============================
 function SideMenu({
   csvFiles,
@@ -186,19 +164,15 @@ function SideMenu({
   view,
   setView,
 }) {
-  const formatCSVName = (name) =>
+  const formatCSVName = (name: string) =>
     name.replace(".csv", "").replace(/[_-]/g, " ");
 
   return (
-    <aside
-      className="hidden md:block fixed left-0 top-0 h-full w-56 bg-black/60 border-r border-nw-gold/40 backdrop-blur-lg p-4 overflow-y-auto z-50"
-      style={{ paddingTop: "70px" }} // offsets your header height
-    >
+    <aside className="hidden md:block fixed left-0 top-0 h-full w-56 bg-black/60 border-r border-nw-gold/40 backdrop-blur-lg p-4 overflow-y-auto z-30"
+      style={{ paddingTop: "70px" }}>
       {/* NAVIGATION */}
       <div className="mb-6">
-        <div className="text-nw-gold-soft text-lg font-bold mb-3 tracking-wide">
-          Navigation
-        </div>
+        <div className="text-nw-gold-soft text-lg font-bold mb-3">Navigation</div>
 
         <button
           onClick={() => setView("dashboard")}
@@ -206,8 +180,7 @@ function SideMenu({
             view === "dashboard"
               ? "bg-nw-gold-soft/20 text-nw-gold-soft"
               : "text-nw-parchment-soft"
-          }`}
-        >
+          }`}>
           Dashboard
         </button>
 
@@ -217,37 +190,24 @@ function SideMenu({
             view === "analytics"
               ? "bg-nw-gold-soft/20 text-nw-gold-soft"
               : "text-nw-parchment-soft"
-          }`}
-        >
+          }`}>
           Analytics
         </button>
       </div>
 
       {/* WAR LIST */}
       <div>
-        <div className="text-nw-gold-soft text-lg font-bold mb-3 tracking-wide">
-          War Reports
-        </div>
+        <div className="text-nw-gold-soft text-lg font-bold mb-3">War Reports</div>
 
-        {/* DEFAULT PAGE ALWAYS FIRST */}
         <button
-          onClick={() => {
-            setSelectedCSV("__none__");
-          }}
+          onClick={() => setSelectedCSV("__none__")}
           className={`block w-full text-left px-3 py-2 rounded mb-1 ${
             selectedCSV === "__none__"
               ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-              : "text-nw-parchment-soft hover:bg-white/10"
-          }`}
-        >
+              : "text-nw-parchment-soft"
+          }`}>
           Overview
         </button>
-
-        {csvFiles.length === 0 && (
-          <div className="text-xs text-nw-parchment-soft/60">
-            No files found.
-          </div>
-        )}
 
         {csvFiles.map((file) => (
           <button
@@ -259,9 +219,8 @@ function SideMenu({
             className={`block w-full text-left px-3 py-2 rounded mb-1 ${
               selectedCSV === file
                 ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-                : "text-nw-parchment-soft hover:bg-white/10"
-            }`}
-          >
+                : "text-nw-parchment-soft"
+            }`}>
             {formatCSVName(file)}
           </button>
         ))}
@@ -271,7 +230,7 @@ function SideMenu({
 }
 
 // ============================
-// COMPONENT: CLASS COMPARISON (AUTO STAT SELECTION)
+// CLASS COMPARISON
 // ============================
 function ClassComparison({ players }) {
   const [selectedClass, setSelectedClass] = useState("BRUISER");
@@ -291,20 +250,15 @@ function ClassComparison({ players }) {
     "UNKNOWN",
   ];
 
-  // 🌟 AUTO-DETECT PRIMARY STAT
   const primaryStat =
-    selectedClass === "HEALS"
+    selectedClass === "HEALS" || selectedClass === "TANK"
       ? "Healing"
-      : selectedClass === "TANK"
-      ? "Healing" // fallback until Damage Taken exists
       : "Damage";
 
-  // Filter by class
   const filtered = players
     .filter((p) => p.buildType === selectedClass)
     .sort((a, b) => b[primaryStat] - a[primaryStat]);
 
-  // Column data
   const kills = filtered.map((p) => p.Kills);
   const deaths = filtered.map((p) => p.Deaths);
   const assists = filtered.map((p) => p.Assists);
@@ -312,7 +266,6 @@ function ClassComparison({ players }) {
   const healing = filtered.map((p) => p.Healing);
   const kp = filtered.map((p) => p.KP);
 
-  // Heat ranges
   const colMinMax = {
     Kills: [Math.min(...kills), Math.max(...kills)],
     Deaths: [Math.min(...deaths), Math.max(...deaths)],
@@ -322,38 +275,29 @@ function ClassComparison({ players }) {
     KP: [Math.min(...kp), Math.max(...kp)],
   };
 
-  // Heat color
-  const heat = (value, [min, max]) => {
-    if (max === min) return "hsl(0, 0%, 20%)";
-    const pct = (value - min) / (max - min);
-    return `hsl(${pct * 120}, 40%, 28%)`; // muted red→green NW-style
+  const heat = (v, [min, max]) => {
+    if (min === max) return "hsl(0, 0%, 20%)";
+    const pct = (v - min) / (max - min);
+    return `hsl(${pct * 120}, 40%, 28%)`;
   };
 
-  // ============================
-  // TOTALS (for all players in this class)
-  // ============================
   const totals = {
     Kills: kills.reduce((a, b) => a + b, 0),
     Deaths: deaths.reduce((a, b) => a + b, 0),
     Assists: assists.reduce((a, b) => a + b, 0),
     Damage: dmg.reduce((a, b) => a + b, 0),
     Healing: healing.reduce((a, b) => a + b, 0),
-    KP: filtered.length
-      ? kp.reduce((a, b) => a + b, 0) / filtered.length
-      : 0,
+    KP: kp.length ? kp.reduce((a, b) => a + b, 0) / kp.length : 0,
   };
 
-  // ============================
-  // RENDER
-  // ============================
   return (
-    <section className="nw-panel p-4 mt-8 rounded-xl shadow-nw">
-      <h2 className="nw-title text-sm md:text-lg text-nw-gold-soft mb-4">
+    <section className="nw-panel p-4 mt-8">
+      <h2 className="nw-title text-nw-gold-soft text-lg mb-4">
         Class Comparison (Sorted by {primaryStat})
       </h2>
 
-      {/* SELECTOR */}
-      <div className="flex items-center gap-4 mb-4">
+      {/* CLASS DROPDOWN */}
+      <div className="mb-4 flex gap-4 items-center">
         <label className="text-sm text-nw-parchment-soft/85">
           Select Class:
         </label>
@@ -361,14 +305,13 @@ function ClassComparison({ players }) {
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          className="px-3 py-2 text-sm rounded border border-nw-gold/60"
-          style={{ backgroundColor: "#2a2620", color: "#f8f3e6" }}
+          className="px-3 py-2 text-sm rounded border border-nw-gold/60 bg-[#2a2620] text-nw-parchment-soft/90"
         >
           {classOptions.map((cls) => (
             <option
               key={cls}
               value={cls}
-              style={{ backgroundColor: "#1a1815", color: "#f8f3e6" }}
+              className="bg-[#1a1815] text-nw-parchment-soft"
             >
               {cls}
             </option>
@@ -393,130 +336,27 @@ function ClassComparison({ players }) {
 
           <tbody>
             {filtered.map((p, i) => (
-              <tr
-                key={i}
-                className="border-t border-nw-gold/10 hover:bg-white/5"
-              >
-                <td className="px-3 py-2 font-medium">{p.Player}</td>
-
-                <td
-                  className="px-3 py-2 font-semibold"
-                  style={{ backgroundColor: heat(p.Kills, colMinMax.Kills) }}
-                >
-                  {p.Kills}
-                </td>
-
-                {/* inverted (lower deaths = greener) */}
-                <td
-                  className="px-3 py-2 font-semibold"
-                  style={{
-                    backgroundColor: heat(
-                      colMinMax.Deaths[1] - (p.Deaths - colMinMax.Deaths[0]),
-                      [0, colMinMax.Deaths[1] - colMinMax.Deaths[0]],
-                    ),
-                  }}
-                >
-                  {p.Deaths}
-                </td>
-
-                <td
-                  className="px-3 py-2 font-semibold"
-                  style={{
-                    backgroundColor: heat(p.Assists, colMinMax.Assists),
-                  }}
-                >
-                  {p.Assists}
-                </td>
-
-                {/* DAMAGE */}
-                <td
-                  className="px-3 py-2 font-semibold"
-                  style={{ backgroundColor: heat(p.Damage, colMinMax.Damage) }}
-                >
-                  {p.Damage.toLocaleString()}
-                </td>
-
-                {/* HEALING */}
-                <td
-                  className="px-3 py-2 font-semibold"
-                  style={{
-                    backgroundColor: heat(p.Healing, colMinMax.Healing),
-                  }}
-                >
-                  {p.Healing.toLocaleString()}
-                </td>
-
-                {/* KP% */}
-                <td
-                  className="px-3 py-2 font-semibold"
-                  style={{ backgroundColor: heat(p.KP, colMinMax.KP) }}
-                >
-                  {p.KP.toFixed(1)}%
-                </td>
+              <tr key={i} className="border-t border-nw-gold/10">
+                <td className="px-3 py-2">{p.Player}</td>
+                <td className="px-3 py-2" style={{ backgroundColor: heat(p.Kills, colMinMax.Kills) }}>{p.Kills}</td>
+                <td className="px-3 py-2" style={{ backgroundColor: heat(p.Deaths, colMinMax.Deaths) }}>{p.Deaths}</td>
+                <td className="px-3 py-2" style={{ backgroundColor: heat(p.Assists, colMinMax.Assists) }}>{p.Assists}</td>
+                <td className="px-3 py-2" style={{ backgroundColor: heat(p.Damage, colMinMax.Damage) }}>{p.Damage.toLocaleString()}</td>
+                <td className="px-3 py-2" style={{ backgroundColor: heat(p.Healing, colMinMax.Healing) }}>{p.Healing.toLocaleString()}</td>
+                <td className="px-3 py-2" style={{ backgroundColor: heat(p.KP, colMinMax.KP) }}>{p.KP.toFixed(1)}%</td>
               </tr>
             ))}
           </tbody>
 
-          {/* TOTAL ROW */}
           <tfoot>
             <tr className="border-t border-nw-gold/20 bg-black/40 font-bold">
-              <td className="px-3 py-2 text-left">TOTAL</td>
-
-              <td
-                className="px-3 py-2"
-                style={{ backgroundColor: heat(totals.Kills, colMinMax.Kills) }}
-              >
-                {totals.Kills}
-              </td>
-
-              <td
-                className="px-3 py-2"
-                style={{
-                  backgroundColor: heat(
-                    colMinMax.Deaths[1] - (totals.Deaths - colMinMax.Deaths[0]),
-                    [0, colMinMax.Deaths[1] - colMinMax.Deaths[0]],
-                  ),
-                }}
-              >
-                {totals.Deaths}
-              </td>
-
-              <td
-                className="px-3 py-2"
-                style={{
-                  backgroundColor: heat(
-                    totals.Assists,
-                    colMinMax.Assists,
-                  ),
-                }}
-              >
-                {totals.Assists}
-              </td>
-
-              <td
-                className="px-3 py-2"
-                style={{
-                  backgroundColor: heat(totals.Damage, colMinMax.Damage),
-                }}
-              >
-                {totals.Damage.toLocaleString()}
-              </td>
-
-              <td
-                className="px-3 py-2"
-                style={{
-                  backgroundColor: heat(totals.Healing, colMinMax.Healing),
-                }}
-              >
-                {totals.Healing.toLocaleString()}
-              </td>
-
-              <td
-                className="px-3 py-2"
-                style={{ backgroundColor: heat(totals.KP, colMinMax.KP) }}
-              >
-                {totals.KP.toFixed(1)}%
-              </td>
+              <td className="px-3 py-2">TOTAL</td>
+              <td className="px-3 py-2">{totals.Kills}</td>
+              <td className="px-3 py-2">{totals.Deaths}</td>
+              <td className="px-3 py-2">{totals.Assists}</td>
+              <td className="px-3 py-2">{totals.Damage.toLocaleString()}</td>
+              <td className="px-3 py-2">{totals.Healing.toLocaleString()}</td>
+              <td className="px-3 py-2">{totals.KP.toFixed(1)}%</td>
             </tr>
           </tfoot>
         </table>
@@ -525,8 +365,14 @@ function ClassComparison({ players }) {
   );
 }
 
+
+
+
+
+
+
 //////////////////////////////////////////////////////////////
-// APP
+// APP COMPONENT
 //////////////////////////////////////////////////////////////
 export default function App() {
   const [players, setPlayers] = useState<EnhancedPlayer[]>([]);
@@ -534,19 +380,22 @@ export default function App() {
   const [view, setView] = useState<"dashboard" | "analytics">("dashboard");
   const [loadingCSV, setLoadingCSV] = useState(false);
 
+  // MOBILE MENU
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const exportRef = useRef<HTMLDivElement | null>(null);
 
   const formatCSVName = (file: string) => {
     return file
-      .replace(".csv", "") // remove .csv
-      .replace(/_/g, " ") // replace underscores
-      .replace(/-/g, " ") // replace hyphens
-      .replace(/\s+/g, " ") // normalize spacing
-      .replace(/\b\w/g, (c) => c.toUpperCase()); // capitalize words
+      .replace(".csv", "")
+      .replace(/_/g, " ")
+      .replace(/-/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   //////////////////////////////////////////////////////////////
-  // CSV UPLOAD
+  // LOAD CSV FROM /public
   //////////////////////////////////////////////////////////////
   const loadPublicCSV = (filename: string) => {
     setLoadingCSV(true);
@@ -566,9 +415,9 @@ export default function App() {
 
               parsed.push({
                 ...normalized,
-                KD: (
-                  normalized.Kills / Math.max(1, normalized.Deaths)
-                ).toFixed(2),
+                KD: (normalized.Kills / Math.max(1, normalized.Deaths)).toFixed(
+                  2,
+                ),
                 buildType: detectBuild(normalized.Build),
               });
             }
@@ -580,6 +429,7 @@ export default function App() {
       });
   };
 
+  // Manual CSV upload (local)
   const handleCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -597,22 +447,18 @@ export default function App() {
 
           parsed.push({
             ...normalized,
-            KD: (
-              normalized.Kills / Math.max(1, normalized.Deaths)
-            ).toFixed(2),
+            KD: (normalized.Kills / Math.max(1, normalized.Deaths)).toFixed(2),
             buildType: detectBuild(normalized.Build),
           });
         }
 
-        setPlayers(
-          parsed.sort((a, b) => a.Rank - b.Rank), // ensure correct ordering
-        );
+        setPlayers(parsed.sort((a, b) => a.Rank - b.Rank));
       },
     });
   };
 
   //////////////////////////////////////////////////////////////
-  // GROUP BUILDING (Authoritative Group column)
+  // GROUP BUILDING (USING GROUP COLUMN)
   //////////////////////////////////////////////////////////////
   useEffect(() => {
     if (players.length === 0) return;
@@ -632,37 +478,133 @@ export default function App() {
     setGroups(sortedGroups);
   }, [players]);
 
+  //////////////////////////////////////////////////////////////
+  // LOAD CSV MANIFEST
+  //////////////////////////////////////////////////////////////
   const [csvFiles, setCsvFiles] = useState<string[]>([]);
+  const [selectedCSV, setSelectedCSV] = useState("__none__");
 
-  // Load manifest at startup
   useEffect(() => {
     fetch("/csv-manifest.json")
       .then((res) => res.json())
       .then((list) => setCsvFiles(list))
-      .catch(() => setCsvFiles([])); // fallback
+      .catch(() => setCsvFiles([]));
   }, []);
 
-  const [selectedCSV, setSelectedCSV] = useState("__none__");
+  //////////////////////////////////////////////////////////////
+  // MOBILE MENU PANEL
+  //////////////////////////////////////////////////////////////
+  const MobileMenu = () => (
+    <>
+      {/* BACKDROP */}
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-200 ${
+          mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+      ></div>
+
+      {/* SLIDE-IN PANEL */}
+      <div
+        className={`fixed top-0 left-0 h-full w-64 bg-black/80 border-r border-nw-gold/40 z-50 p-4 overflow-y-auto transform transition-transform duration-300 ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        style={{ paddingTop: "70px" }}
+      >
+        {/* NAVIGATION */}
+        <div className="mb-6">
+          <div className="text-nw-gold-soft text-lg font-bold mb-3">
+            Navigation
+          </div>
+
+          <button
+            onClick={() => {
+              setView("dashboard");
+              setMobileMenuOpen(false);
+            }}
+            className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+              view === "dashboard"
+                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                : "text-nw-parchment-soft"
+            }`}
+          >
+            Dashboard
+          </button>
+
+          <button
+            onClick={() => {
+              setView("analytics");
+              setMobileMenuOpen(false);
+            }}
+            className={`block w-full text-left px-3 py-2 rounded ${
+              view === "analytics"
+                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                : "text-nw-parchment-soft"
+            }`}
+          >
+            Analytics
+          </button>
+        </div>
+
+        {/* WAR REPORTS LIST */}
+        <div>
+          <div className="text-nw-gold-soft text-lg font-bold mb-3">
+            War Reports
+          </div>
+
+          <button
+            onClick={() => {
+              setSelectedCSV("__none__");
+              setMobileMenuOpen(false);
+            }}
+            className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+              selectedCSV === "__none__"
+                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                : "text-nw-parchment-soft"
+            }`}
+          >
+            Overview
+          </button>
+
+          {csvFiles.map((file) => (
+            <button
+              key={file}
+              onClick={() => {
+                setSelectedCSV(file);
+                loadPublicCSV(file);
+                setMobileMenuOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+                selectedCSV === file
+                  ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                  : "text-nw-parchment-soft"
+              }`}
+            >
+              {formatCSVName(file)}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  );
 
   //////////////////////////////////////////////////////////////
   // RENDER
   //////////////////////////////////////////////////////////////
   return (
     <div className="min-h-screen bg-nw-obsidian text-nw-parchment-soft nw-bg font-body">
+
+      {/* LOADING OVERLAY */}
       {loadingCSV && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="text-center animate-fadeIn">
             <div className="w-12 h-12 border-4 border-nw-gold-soft border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-nw-parchment-soft text-lg tracking-wide">
-              Loading War Report…
-            </p>
+            <p className="text-nw-parchment-soft text-lg">Loading War Report…</p>
           </div>
         </div>
       )}
 
-      {/* =========================
-         LEFT SIDE MENU (desktop only)
-         ========================= */}
+      {/* DESKTOP MENU */}
       <SideMenu
         csvFiles={csvFiles}
         selectedCSV={selectedCSV}
@@ -672,49 +614,52 @@ export default function App() {
         setView={setView}
       />
 
-      {/* =========================
-         TOP HEADER
-         ========================= */}
+      {/* MOBILE MENU */}
+      <MobileMenu />
+
+      {/* TOP HEADER */}
       <header className="md:sticky md:top-0 z-40 bg-black/60 backdrop-blur border-b border-nw-gold/40 px-4 py-3 flex justify-between md:ml-56 ml-0">
+        <button
+          className="md:hidden text-nw-gold-soft text-3xl mr-3"
+          onClick={() => setMobileMenuOpen(true)}
+        >
+          ☰
+        </button>
+
         <h1 className="nw-title text-nw-gold-soft text-xl">
           Mercguards War Ledger
         </h1>
 
-        <div className="flex gap-2 text-xs items-center">
-          {/* (empty right area for now) */}
-        </div>
+        <div className="flex gap-2 text-xs items-center"></div>
       </header>
 
-      {/* =========================
-         MAIN CONTENT AREA
-         ========================= */}
+      {/* MAIN CONTENT */}
       <main
         ref={exportRef}
         className="md:ml-56 ml-0 max-w-[1800px] mx-auto px-4 py-5 space-y-6"
       >
-        {/* DEFAULT LANDING PAGE (when no CSV selected) */}
+        {/* ============================
+            LANDING PAGE
+        ============================ */}
         {selectedCSV === "__none__" && (
-          <div className="text-center text-nw-parchment-soft py-20 opacity-70">
+          <div className="text-center py-20 opacity-70">
             <h2 className="text-3xl mb-3 font-semibold">
               Welcome to the Mercguards War Ledger
             </h2>
-            <p className="text-lg">
-              Please select a war report from the left menu.
-            </p>
+            <p className="text-lg">Please select a war report from the menu.</p>
           </div>
         )}
 
-        {/* DASHBOARD */}
+        {/* ============================
+            DASHBOARD
+        ============================ */}
         {selectedCSV !== "__none__" && view === "dashboard" && (
           <>
-            {/* ----------------------------------------------------
-            TEAM MATCHUP — DEFENDER VS ATTACKER
-            ---------------------------------------------------- */}
+            {/* TEAM MATCHUP */}
             {players.length > 0 && (
-              <section className="nw-panel p-4 mb-6 mx-auto flex justify-center items-center text-center">
+              <section className="nw-panel p-4 mb-6 flex justify-center text-center">
                 <div className="text-center">
                   {(() => {
-                    // Explicitly read from Defender / Attacker CSV columns
                     const defenderTeam =
                       players.find(
                         (p) => p.Defender && p.Defender.trim().length > 0,
@@ -729,22 +674,17 @@ export default function App() {
                       ? String(players[0].Result).trim().toLowerCase()
                       : "";
 
-                    // Normalize lots of possible values
                     const isWin =
                       rawResult.includes("win") ||
                       rawResult === "w" ||
                       rawResult === "1" ||
-                      rawResult === "victory" ||
-                      rawResult === "defender win" ||
-                      rawResult === "attacker win";
+                      rawResult === "victory";
 
                     const isLoss =
                       rawResult.includes("loss") ||
                       rawResult === "l" ||
                       rawResult === "0" ||
-                      rawResult === "defeat" ||
-                      rawResult === "defender loss" ||
-                      rawResult === "attacker loss";
+                      rawResult === "defeat";
 
                     let outcomeText = "UNDECIDED";
                     let outcomeColor = "text-yellow-300";
@@ -759,7 +699,6 @@ export default function App() {
 
                     return (
                       <div className="flex flex-col items-center gap-2">
-                        {/* Teams */}
                         <div className="flex justify-center items-center gap-6 text-xl font-semibold">
                           <span className="text-nw-parchment-soft">
                             {defenderTeam}
@@ -774,10 +713,7 @@ export default function App() {
                           </span>
                         </div>
 
-                        {/* Result */}
-                        <div
-                          className={`text-2xl font-bold mt-1 ${outcomeColor}`}
-                        >
+                        <div className={`text-2xl font-bold mt-1 ${outcomeColor}`}>
                           {outcomeText}
                         </div>
                       </div>
@@ -787,18 +723,29 @@ export default function App() {
               </section>
             )}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             {/* ----------------------------------------------------
             ARMY TOTALS — FULL WAR STATS
             ---------------------------------------------------- */}
             {players.length > 0 && (
               <section className="nw-panel p-4 mb-4 space-y-6">
+
                 {/* Row 1 */}
-                <div
-                  className="
-                  grid grid-cols-2 md:grid-cols-4 text-center text-sm text-nw-parchment-soft/90
-                  divide-x divide-nw-gold/20
-                "
-                >
+                <div className="grid grid-cols-2 md:grid-cols-4 text-center text-sm text-nw-parchment-soft/90 divide-x divide-nw-gold/20">
                   <div className="px-2">
                     <div className="uppercase text-[28px] text-nw-parchment-soft/60">
                       Kills
@@ -824,10 +771,7 @@ export default function App() {
                     <div className="text-nw-gold-soft font-semibold text-lg">
                       {(
                         players.reduce((a, p) => a + p.Kills, 0) /
-                        Math.max(
-                          1,
-                          players.reduce((a, p) => a + p.Deaths, 0),
-                        )
+                        Math.max(1, players.reduce((a, p) => a + p.Deaths, 0))
                       ).toFixed(2)}
                     </div>
                   </div>
@@ -848,20 +792,13 @@ export default function App() {
                 <div className="border-t border-nw-gold/20"></div>
 
                 {/* Row 2 */}
-                <div
-                  className="
-                  grid grid-cols-2 text-center text-sm text-nw-parchment-soft/90
-                  divide-x divide-nw-gold/20
-                "
-                >
+                <div className="grid grid-cols-2 text-center text-sm text-nw-parchment-soft/90 divide-x divide-nw-gold/20">
                   <div className="px-2">
                     <div className="uppercase text-[28px] text-nw-parchment-soft/60">
                       Damage
                     </div>
                     <div className="text-nw-gold-soft font-semibold text-lg">
-                      {players
-                        .reduce((a, p) => a + p.Damage, 0)
-                        .toLocaleString()}
+                      {players.reduce((a, p) => a + p.Damage, 0).toLocaleString()}
                     </div>
                   </div>
 
@@ -870,16 +807,16 @@ export default function App() {
                       Healing
                     </div>
                     <div className="text-nw-gold-soft font-semibold text-lg">
-                      {players
-                        .reduce((a, p) => a + p.Healing, 0)
-                        .toLocaleString()}
+                      {players.reduce((a, p) => a + p.Healing, 0).toLocaleString()}
                     </div>
                   </div>
                 </div>
               </section>
             )}
 
-            {/* Insights */}
+            {/* ----------------------------------------------------
+               INSIGHTS (TOP DPS, HEALER, ASSISTS, KD)
+            ---------------------------------------------------- */}
             {players.length > 0 && (
               <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
@@ -900,17 +837,11 @@ export default function App() {
                   const value =
                     stat === "KD" ? p.KD : (p as any)[stat].toLocaleString();
 
-                  const miniData =
-                    stat === "KD"
-                      ? [{ name: "KD", value: parseFloat(p.KD) }]
-                      : [{ name: stat, value: (p as any)[stat] }];
-
                   return (
                     <article
                       key={title}
                       className="nw-panel p-4 flex flex-col gap-3"
                     >
-                      {/* Header */}
                       <div className="flex items-center justify-between">
                         <div>
                           <h2 className="text-xs text-nw-gold-soft uppercase tracking-widest">
@@ -922,7 +853,7 @@ export default function App() {
                           </p>
                         </div>
 
-                        {/* Build chip */}
+                        {/* Build badge */}
                         <span
                           className="px-2 py-0.5 rounded-full text-[15px] uppercase border"
                           style={{
@@ -940,7 +871,9 @@ export default function App() {
               </section>
             )}
 
-            {/* War Ledger */}
+            {/* ----------------------------------------------------
+               WAR LEDGER TABLE
+            ---------------------------------------------------- */}
             {players.length > 0 && (
               <section className="nw-panel p-4">
                 <h2 className="nw-title text-nw-gold-soft text-lg mb-3">
@@ -951,33 +884,15 @@ export default function App() {
                   <table className="min-w-full text-sm border-collapse">
                     <thead className="bg-black/40">
                       <tr>
-                        <th className="px-3 py-2 text-left text-[13px]">
-                          Rank
-                        </th>
-                        <th className="px-3 py-2 text-left text-[13px]">
-                          Group
-                        </th>
-                        <th className="px-3 py-2 text-left text-[13px]">
-                          Player
-                        </th>
-                        <th className="px-3 py-2 text-left text-[13px]">
-                          Build
-                        </th>
-                        <th className="px-3 py-2 text-left text-[13px]">
-                          Kills
-                        </th>
-                        <th className="px-3 py-2 text-left text-[13px]">
-                          Deaths
-                        </th>
-                        <th className="px-3 py-2 text-left text-[13px]">
-                          Assists
-                        </th>
-                        <th className="px-3 py-2 text-left text-[13px]">
-                          Healing
-                        </th>
-                        <th className="px-3 py-2 text-left text-[13px]">
-                          Damage
-                        </th>
+                        <th className="px-3 py-2 text-left">Rank</th>
+                        <th className="px-3 py-2 text-left">Group</th>
+                        <th className="px-3 py-2 text-left">Player</th>
+                        <th className="px-3 py-2 text-left">Build</th>
+                        <th className="px-3 py-2 text-left">Kills</th>
+                        <th className="px-3 py-2 text-left">Deaths</th>
+                        <th className="px-3 py-2 text-left">Assists</th>
+                        <th className="px-3 py-2 text-left">Healing</th>
+                        <th className="px-3 py-2 text-left">Damage</th>
                         <th className="px-3 py-2 text-right">K/D</th>
                         <th className="px-3 py-2 text-right">KP%</th>
                       </tr>
@@ -996,12 +911,13 @@ export default function App() {
                           </td>
                           <td className="px-3 py-2">
                             <span
-                              className="px-2 py-0.5 rounded-full text-[11px] uppercase"
+                              className="px-2 py-0.5 rounded-full text-[11px] uppercase border"
                               style={{
                                 backgroundColor:
                                   buildColors[p.buildType] + "26",
                                 color: buildColors[p.buildType],
-                                border: `1px solid ${buildColors[p.buildType]}66`,
+                                borderColor:
+                                  buildColors[p.buildType] + "66",
                               }}
                             >
                               {p.buildType}
@@ -1028,23 +944,20 @@ export default function App() {
               </section>
             )}
 
-            {/* ============================
-             ARMY GROUPS  (NON-QDPS FIRST)
-           ============================ */}
+            {/* ----------------------------------------------------
+               ARMY GROUPS + QDPS SQUAD
+            ---------------------------------------------------- */}
             {players.length > 0 && (
               <>
                 {(() => {
-                  // Pull QDPS
                   const qdpsPlayers = players.filter(
                     (p) => p.buildType === "QDPS",
                   );
 
-                  // Everything else goes into normal groups
                   const nonQDPS = players.filter(
                     (p) => p.buildType !== "QDPS",
                   );
 
-                  // Rebuild groups
                   const cleanedGroups: EnhancedPlayer[][] = Object.values(
                     nonQDPS.reduce((acc: any, p: EnhancedPlayer) => {
                       if (!acc[p.Group]) acc[p.Group] = [];
@@ -1053,7 +966,6 @@ export default function App() {
                     }, {}),
                   );
 
-                  // Sort inside groups by build priority
                   cleanedGroups.forEach((g) =>
                     g.sort(
                       (a, b) =>
@@ -1062,8 +974,7 @@ export default function App() {
                     ),
                   );
 
-                  // QDPS totals
-                  const qdpsTotals = {
+                  const qTotals = {
                     kills: qdpsPlayers.reduce((a, p) => a + p.Kills, 0),
                     deaths: qdpsPlayers.reduce((a, p) => a + p.Deaths, 0),
                     damage: qdpsPlayers.reduce((a, p) => a + p.Damage, 0),
@@ -1075,9 +986,9 @@ export default function App() {
 
                   return (
                     <>
-                      {/* ============================
-                       ARMY GROUPS SHOWN FIRST
-                     ============================ */}
+                      {/* -------------------------
+                          ARMY GROUPS
+                      ------------------------- */}
                       {cleanedGroups.length > 0 && (
                         <section className="space-y-5 mb-10">
                           <h2 className="nw-title text-nw-gold-soft text-lg">
@@ -1102,6 +1013,7 @@ export default function App() {
                                 (a, p) => a + p.Healing,
                                 0,
                               );
+
                               const avgKP =
                                 g.reduce((a, p) => a + p.KP, 0) /
                                 Math.max(1, g.length);
@@ -1113,12 +1025,12 @@ export default function App() {
                                   key={idx}
                                   className="nw-panel p-4 text-xs flex flex-col gap-3"
                                 >
-                                  <header className="flex justify-between items-start gap-3">
+                                  <header className="flex justify-between items-start">
                                     <h3 className="font-semibold text-nw-parchment-soft tracking-wide text-lg">
                                       Group {groupNum}
                                     </h3>
 
-                                    <div className="text-right text-[11px] px-3 py-1 rounded-full border border-nw-gold/40 bg-black/30 text-nw-parchment-soft/85 font-semibold tracking-wide">
+                                    <div className="text-right text-[11px] px-3 py-1 rounded-full border border-nw-gold/40 bg-black/30 text-nw-parchment-soft/85 font-semibold">
                                       Total K/D:{" "}
                                       <span className="text-nw-gold-soft">
                                         {totalKills}/{totalDeaths}
@@ -1152,6 +1064,7 @@ export default function App() {
 
                                   <hr className="border-nw-gold/20 mt-2" />
 
+                                  {/* Player list */}
                                   <ul className="space-y-3">
                                     {g.map((p) => (
                                       <li key={p.Player} className="pb-2">
@@ -1160,7 +1073,6 @@ export default function App() {
                                             <span className="font-medium truncate">
                                               {p.Player}
                                             </span>
-
                                             <span
                                               className="px-2 py-0.5 rounded-full text-[10px] uppercase border flex-shrink-0"
                                               style={{
@@ -1178,21 +1090,14 @@ export default function App() {
                                               {p.buildType}
                                             </span>
                                           </div>
-
                                           <span className="text-xs text-nw-gold-soft font-semibold flex-shrink-0">
                                             {p.Kills}/{p.Deaths}
                                           </span>
                                         </div>
 
-                                        <div className="mt-0.5 grid grid-cols-[1fr_auto_1fr] text-[11px] text-nw-parchment-soft/90 tracking-tight">
-                                          <span className="text-left">
-                                            DMG:{" "}
-                                            {p.Damage.toLocaleString()}
-                                          </span>
-                                          <span className="text-center">
-                                            HEALS:{" "}
-                                            {p.Healing.toLocaleString()}
-                                          </span>
+                                        <div className="mt-0.5 grid grid-cols-[1fr_auto_1fr] text-[11px] text-nw-parchment-soft/90">
+                                          <span>DMG: {p.Damage.toLocaleString()}</span>
+                                          <span>HEALS: {p.Healing.toLocaleString()}</span>
                                           <span className="text-right">
                                             KP: {p.KP.toFixed(1)}%
                                           </span>
@@ -1209,14 +1114,15 @@ export default function App() {
                         </section>
                       )}
 
-                      {/* ============================
-                      DPS SQUAD (QDPS) BELOW GROUPS
-                     ============================ */}
+                      {/* -------------------------
+                          QDPS Squad
+                      ------------------------- */}
                       {qdpsPlayers.length > 0 && (
                         <section className="space-y-5 mb-10">
                           <h2 className="nw-title text-nw-gold-soft text-lg">
                             QUAD DPS
                           </h2>
+
                           <div className="nw-panel p-4 text-xs flex flex-col gap-3">
                             {/* Totals */}
                             <div className="grid grid-cols-2 gap-y-1 text-[11px] text-nw-parchment-soft/85 mb-3">
@@ -1224,33 +1130,34 @@ export default function App() {
                                 Total K/D
                               </div>
                               <div className="text-right text-nw-gold-soft">
-                                {qdpsTotals.kills}/{qdpsTotals.deaths}
+                                {qTotals.kills}/{qTotals.deaths}
                               </div>
 
                               <div className="uppercase text-[10px] text-nw-parchment-soft/60">
                                 Total Damage
                               </div>
                               <div className="text-right">
-                                {qdpsTotals.damage.toLocaleString()}
+                                {qTotals.damage.toLocaleString()}
                               </div>
 
                               <div className="uppercase text-[10px] text-nw-parchment-soft/60">
                                 Total Healing
                               </div>
                               <div className="text-right">
-                                {qdpsTotals.healing.toLocaleString()}
+                                {qTotals.healing.toLocaleString()}
                               </div>
 
                               <div className="uppercase text-[10px] text-nw-parchment-soft/60">
                                 Avg KP
                               </div>
                               <div className="text-right">
-                                {qdpsTotals.avgKP.toFixed(1)}%
+                                {qTotals.avgKP.toFixed(1)}%
                               </div>
                             </div>
 
                             <hr className="border-nw-gold/20 my-3" />
 
+                            {/* Player list */}
                             <ul className="space-y-3">
                               {qdpsPlayers.map((p) => (
                                 <li key={p.Player} className="pb-2">
@@ -1259,7 +1166,6 @@ export default function App() {
                                       <span className="font-medium truncate">
                                         {p.Player}
                                       </span>
-
                                       <span
                                         className="px-2 py-0.5 rounded-full text-[10px] uppercase border flex-shrink-0"
                                         style={{
@@ -1279,13 +1185,9 @@ export default function App() {
                                     </span>
                                   </div>
 
-                                  <div className="mt-0.5 grid grid-cols-[1fr_auto_1fr] text-[11px] text-nw-parchment-soft/90 tracking-tight">
-                                    <span>
-                                      DMG: {p.Damage.toLocaleString()}
-                                    </span>
-                                    <span>
-                                      HEALS: {p.Healing.toLocaleString()}
-                                    </span>
+                                  <div className="mt-0.5 grid grid-cols-[1fr_auto_1fr] text-[11px] text-nw-parchment-soft/90">
+                                    <span>DMG: {p.Damage.toLocaleString()}</span>
+                                    <span>HEALS: {p.Healing.toLocaleString()}</span>
                                     <span className="text-right">
                                       KP: {p.KP.toFixed(1)}%
                                     </span>
@@ -1306,19 +1208,15 @@ export default function App() {
           </>
         )}
 
-        {/* ============================
-          CLASS COMPARISON SECTION
-        ============================ */}
+        {/* ----------------------------------------------------
+           ANALYTICS SECTION (Class Comparison + Charts)
+        ---------------------------------------------------- */}
         {view === "analytics" && players.length > 0 && (
-          <ClassComparison players={players} />
-        )}
-
-        {/* ============================
-          ANALYTICS — DAMAGE BY PLAYER
-        ============================ */}
-        {players.length > 0 && view === "analytics" && (
           <>
-            {/* DAMAGE BY PLAYER */}
+            {/* CLASS COMPARISON */}
+            <ClassComparison players={players} />
+
+            {/* DAMAGE BY PLAYER CHART */}
             <section className="nw-panel p-4 mt-8 rounded-xl shadow-nw">
               <header className="flex items-baseline justify-between mb-2">
                 <h2 className="nw-title text-sm md:text-lg text-nw-gold-soft">
@@ -1338,13 +1236,7 @@ export default function App() {
                     margin={{ top: 20, right: 20, left: 10, bottom: 80 }}
                   >
                     <defs>
-                      <linearGradient
-                        id="damageGrad"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
+                      <linearGradient id="damageGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#f6d190" />
                         <stop offset="60%" stopColor="#d79a32" />
                         <stop offset="100%" stopColor="#8a5a18" />
@@ -1388,9 +1280,7 @@ export default function App() {
               </div>
             </section>
 
-            {/* ============================
-              ANALYTICS — K/D CURVE (LINE GRAPH)
-            ============================ */}
+            {/* K/D CURVE */}
             <section className="nw-panel p-4 mt-8 rounded-xl shadow-nw">
               <h2 className="nw-title text-sm md:text-lg text-nw-gold-soft mb-4">
                 K/D Curve
@@ -1400,10 +1290,7 @@ export default function App() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={[...players]
-                      .map((p) => ({
-                        Player: p.Player,
-                        KD: parseFloat(p.KD),
-                      }))
+                      .map((p) => ({ Player: p.Player, KD: parseFloat(p.KD) }))
                       .sort((a, b) => b.KD - a.KD)}
                     margin={{ top: 20, right: 20, left: 10, bottom: 80 }}
                   >
@@ -1418,10 +1305,7 @@ export default function App() {
                       tick={{ fontSize: 10, fill: "#f8f3e6" }}
                     />
 
-                    <YAxis
-                      tick={{ fill: "#f8f3e6" }}
-                      domain={[0, "dataMax + 1"]}
-                    />
+                    <YAxis tick={{ fill: "#f8f3e6" }} domain={[0, "dataMax + 1"]} />
 
                     <Tooltip
                       formatter={(v: any) => v.toFixed(2)}
@@ -1452,9 +1336,7 @@ export default function App() {
               </div>
             </section>
 
-            {/* ============================
-              ANALYTICS — KP% DISTRIBUTION TABLE
-            ============================ */}
+            {/* KP% DISTRIBUTION */}
             <section className="nw-panel p-4 mt-8 rounded-xl shadow-nw">
               <h2 className="nw-title text-sm md:text-lg text-nw-gold-soft mb-4">
                 KP% Distribution
@@ -1468,6 +1350,7 @@ export default function App() {
                       <th className="px-3 py-2 text-left">KP%</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {[...players]
                       .map((p) => ({ Player: p.Player, KP: p.KP }))
@@ -1476,9 +1359,7 @@ export default function App() {
                         const max = arr[0].KP;
                         const min = arr[arr.length - 1].KP;
                         const pct = (row.KP - min) / Math.max(1, max - min);
-                        const bg = `hsl(${pct * 180}, 40%, ${
-                          20 + pct * 20
-                        }%)`;
+                        const bg = `hsl(${pct * 180}, 40%, ${20 + pct * 20}%)`;
 
                         return (
                           <tr
@@ -1498,10 +1379,8 @@ export default function App() {
               </div>
             </section>
 
-            {/* ============================
-              ANALYTICS — TOP 15 DEATHS (PLAYERS)
-            ============================ */}
-            <section className="nw-panel p-4 mt-8 rounded-xl shadow-nw">
+            {/* TOP 15 DEATHS */}
+            <section className="nw-panel p-4 mt-8 rounded-xl shadow-nw mb-10">
               <h2 className="nw-title text-sm md:text-lg text-nw-gold-soft mb-4">
                 Top 15 Deaths
               </h2>
@@ -1510,7 +1389,7 @@ export default function App() {
                 const rows = [...players]
                   .map((p) => ({ Player: p.Player, Deaths: p.Deaths }))
                   .sort((a, b) => b.Deaths - a.Deaths)
-                  .slice(0, 15); // TAKE TOP 15
+                  .slice(0, 15);
 
                 const max = rows[0]?.Deaths ?? 1;
 
@@ -1527,8 +1406,6 @@ export default function App() {
                       <tbody>
                         {rows.map((row, i) => {
                           const pct = row.Deaths / max;
-
-                          // Muted NW-themed gradient (red → amber → teal)
                           const bg = `hsl(${(1 - pct) * 195}, 45%, ${
                             29 + (1 - pct) * 15
                           }%)`;
