@@ -439,6 +439,21 @@ function ClassComparison({ players }) {
     return `hsl(${pct * 120}, 40%, 28%)`; // muted red→green NW-style
   };
 
+
+// ============================
+// TOTALS (for all players in this class)
+// ============================
+const totals = {
+  Kills: kills.reduce((a, b) => a + b, 0),
+  Deaths: deaths.reduce((a, b) => a + b, 0),
+  Assists: assists.reduce((a, b) => a + b, 0),
+  Damage: dmg.reduce((a, b) => a + b, 0),
+  Healing: healing.reduce((a, b) => a + b, 0),
+  KP: filtered.length
+    ? kp.reduce((a, b) => a + b, 0) / filtered.length
+    : 0,
+};
+
   return (
     <section className="nw-panel p-4 mt-8 rounded-xl shadow-nw">
       <h2 className="nw-title text-sm md:text-lg text-nw-gold-soft mb-4">
@@ -542,6 +557,60 @@ function ClassComparison({ players }) {
               </tr>
             ))}
           </tbody>
+		  {/* TOTAL ROW */}
+<tfoot>
+  <tr className="border-t border-nw-gold/20 bg-black/40 font-bold">
+    <td className="px-3 py-2 text-left">TOTAL</td>
+
+    <td
+      className="px-3 py-2"
+      style={{ backgroundColor: heat(totals.Kills, colMinMax.Kills) }}
+    >
+      {totals.Kills}
+    </td>
+
+    <td
+      className="px-3 py-2"
+      style={{
+        backgroundColor: heat(
+          colMinMax.Deaths[1] - (totals.Deaths - colMinMax.Deaths[0]),
+          [0, colMinMax.Deaths[1] - colMinMax.Deaths[0]]
+        ),
+      }}
+    >
+      {totals.Deaths}
+    </td>
+
+    <td
+      className="px-3 py-2"
+      style={{ backgroundColor: heat(totals.Assists, colMinMax.Assists) }}
+    >
+      {totals.Assists}
+    </td>
+
+    <td
+      className="px-3 py-2"
+      style={{ backgroundColor: heat(totals.Damage, colMinMax.Damage) }}
+    >
+      {totals.Damage.toLocaleString()}
+    </td>
+
+    <td
+      className="px-3 py-2"
+      style={{ backgroundColor: heat(totals.Healing, colMinMax.Healing) }}
+    >
+      {totals.Healing.toLocaleString()}
+    </td>
+
+    <td
+      className="px-3 py-2"
+      style={{ backgroundColor: heat(totals.KP, colMinMax.KP) }}
+    >
+      {totals.KP.toFixed(1)}%
+    </td>
+  </tr>
+</tfoot>
+
         </table>
       </div>
     </section>
