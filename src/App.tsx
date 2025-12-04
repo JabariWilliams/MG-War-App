@@ -42,6 +42,7 @@ const VALID_COLUMNS = [
   "KP%",
   "Defender",
   "Attacker",
+  "Result"
 ];
 
 type Build =
@@ -71,6 +72,7 @@ interface Player {
   KP: number;
   Defender?: string;
   Attacker?: string;
+  Result?: string;
 }
 
 interface EnhancedPlayer extends Player {
@@ -166,6 +168,8 @@ const normalizeCSVRow = (row: any): Player | null => {
   KP: num(cleaned["KP %"] ?? cleaned["KP%"] ?? 0),
   Defender: cleaned.Defender ? String(cleaned.Defender).trim() : "",
   Attacker: cleaned.Attacker ? String(cleaned.Attacker).trim() : "",
+  Result: cleaned.Result ? String(cleaned.Result).trim() : "",
+
 };
 
 
@@ -262,6 +266,98 @@ const formatCSVName = (file: string) => {
       },
     });
   };
+// ============================
+// SIDE MENU — Dashboard / Analytics + War List
+// ============================
+function SideMenu({
+  csvFiles,
+  selectedCSV,
+  setSelectedCSV,
+  loadPublicCSV,
+  view,
+  setView,
+}) {
+  const formatCSVName = (name) =>
+    name.replace(".csv", "").replace(/[_-]/g, " ");
+
+  return (
+    <aside
+      className="fixed left-0 top-0 h-full w-56 bg-black/60 border-r border-nw-gold/40 backdrop-blur-lg p-4 overflow-y-auto z-50"
+      style={{ paddingTop: "70px" }} // offsets your header height
+    >
+      {/* NAVIGATION */}
+      <div className="mb-6">
+        <div className="text-nw-gold-soft text-lg font-bold mb-3 tracking-wide">
+          Navigation
+        </div>
+
+        <button
+          onClick={() => setView("dashboard")}
+          className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+            view === "dashboard"
+              ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+              : "text-nw-parchment-soft"
+          }`}
+        >
+           Dashboard
+        </button>
+
+        <button
+          onClick={() => setView("analytics")}
+          className={`block w-full text-left px-3 py-2 rounded ${
+            view === "analytics"
+              ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+              : "text-nw-parchment-soft"
+          }`}
+        >
+           Analytics
+        </button>
+      </div>
+
+      {/* WAR LIST */}
+      <div>
+        <div className="text-nw-gold-soft text-lg font-bold mb-3 tracking-wide">
+          War Reports
+        </div>
+  {/* DEFAULT PAGE ALWAYS FIRST */}
+  <button
+    onClick={() => {
+      setSelectedCSV("__none__");
+    }}
+    className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+      selectedCSV === "__none__"
+        ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+        : "text-nw-parchment-soft hover:bg-white/10"
+    }`}
+  >
+     Overview
+  </button>
+        {csvFiles.length === 0 && (
+          <div className="text-xs text-nw-parchment-soft/60">
+            No files found.
+          </div>
+        )}
+
+        {csvFiles.map((file) => (
+          <button
+            key={file}
+            onClick={() => {
+              setSelectedCSV(file);
+              loadPublicCSV(file);
+            }}
+            className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+              selectedCSV === file
+                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                : "text-nw-parchment-soft hover:bg-white/10"
+            }`}
+          >
+            {formatCSVName(file)}
+          </button>
+        ))}
+      </div>
+    </aside>
+  );
+}
 
   //////////////////////////////////////////////////////////////
   // GROUP BUILDING (Authoritative Group column)
@@ -464,109 +560,132 @@ useEffect(() => {
 }, []);
 const [selectedCSV, setSelectedCSV] = useState("__none__");
 
-  //////////////////////////////////////////////////////////////
-  // RENDER
-  //////////////////////////////////////////////////////////////
-  return (
-    <div className="min-h-screen bg-nw-obsidian text-nw-parchment-soft nw-bg font-body">
-      <header className="sticky top-0 z-40 bg-black/60 backdrop-blur border-b border-nw-gold/40 px-4 py-3 flex justify-between">
-        <h1 className="nw-title text-nw-gold-soft text-xl">Mercguards War Ledger</h1>
 
-        <div className="flex gap-2 text-xs items-center">
-          <select
-  className="nw-panel px-2 py-1 cursor-pointer text-xs border border-nw-gold/40"
-  value={selectedCSV}
-  onChange={(e) => {
-    const file = e.target.value;
-    if (file === "__none__") {
-      setPlayers([]);        // Clear data
-      setSelectedCSV("__none__");
-      return;
-    }
-    setSelectedCSV(file);
-    loadPublicCSV(file);
-  }}
-  style={{ backgroundColor: "#2a2620", color: "#f8f3e6" }}
+//////////////////////////////////////////////////////////////
+// RENDER
+//////////////////////////////////////////////////////////////
+return (
+  <div className="min-h-screen bg-nw-obsidian text-nw-parchment-soft nw-bg font-body">
+
+    {/* =========================
+       LEFT SIDE MENU
+       ========================= */}
+    <SideMenu
+      csvFiles={csvFiles}
+      selectedCSV={selectedCSV}
+      setSelectedCSV={setSelectedCSV}
+      loadPublicCSV={loadPublicCSV}
+      view={view}
+      setView={setView}
+    />
+
+    {/* =========================
+       TOP HEADER (existing)
+       ========================= */}
+    <header className="sticky top-0 z-40 bg-black/60 backdrop-blur border-b border-nw-gold/40 px-4 py-3 flex justify-between ml-56">
+      <h1 className="nw-title text-nw-gold-soft text-xl">Mercguards War Ledger</h1>
+
+      <div className="flex gap-2 text-xs items-center">
+
+        
+
+
+
+      </div>
+    </header>
+
+{/* =========================
+   MAIN CONTENT AREA (shifted right)
+   ========================= */}
+<main
+  ref={exportRef}
+  className="ml-56 max-w-[1800px] mx-auto px-4 py-5 space-y-6"
 >
-  <option value="__none__">None</option>
 
-  {csvFiles.map((file) => (
-    <option
-      key={file}
-      value={file}
-      style={{ backgroundColor: "#1a1815", color: "#f8f3e6" }}
-    >
-      {formatCSVName(file)}
-    </option>
-  ))}
-</select>
+  {/* DEFAULT LANDING PAGE (when no CSV selected) */}
+  {selectedCSV === "__none__" && (
+    <div className="text-center text-nw-parchment-soft py-20 opacity-70">
+      <h2 className="text-3xl mb-3 font-semibold">Welcome to the Mercguards War Ledger</h2>
+      <p className="text-lg">Please select a war report from the left menu.</p>
+    </div>
+  )}
 
+  {/* DASHBOARD */}
+  {selectedCSV !== "__none__" && view === "dashboard" && (
+    <>
 
-
-          <button
-            onClick={() => setView("dashboard")}
-            className={`px-3 py-1 border ${
-              view === "dashboard" ? "border-nw-gold text-nw-gold-soft" : "border-nw-gold/40"
-            }`}
-          >
-            Dashboard
-          </button>
-
-          <button
-            onClick={() => setView("analytics")}
-            className={`px-3 py-1 border ${
-              view === "analytics" ? "border-nw-gold text-nw-gold-soft" : "border-nw-gold/40"
-            }`}
-          >
-            Analytics
-          </button>
-
-        </div>
-      </header>
-
-      <main ref={exportRef} className="max-w-[1800px] mx-auto px-4 py-5 space-y-6">
-        {/* ----------------------------------------------------
-        DASHBOARD
-        ---------------------------------------------------- */}
-        {view === "dashboard" && (
-          <>
 
 {/* ----------------------------------------------------
 TEAM MATCHUP — DEFENDER VS ATTACKER
 ---------------------------------------------------- */}
 {players.length > 0 && (
   <section className="nw-panel p-4 mb-6 mx-auto flex justify-center items-center text-center">
-
     <div className="text-center">
-
-
       {(() => {
         // Explicitly read from Defender / Attacker CSV columns
-const defenderTeam =
-  players.find((p) => p.Defender && p.Defender.trim().length > 0)?.Defender ||
-  "Defenders";
+        const defenderTeam =
+          players.find((p) => p.Defender && p.Defender.trim().length > 0)
+            ?.Defender || "Defenders";
 
-const attackerTeam =
-  players.find((p) => p.Attacker && p.Attacker.trim().length > 0)?.Attacker ||
-  "Attackers";
+        const attackerTeam =
+          players.find((p) => p.Attacker && p.Attacker.trim().length > 0)
+            ?.Attacker || "Attackers";
 
+        const rawResult = players[0]?.Result
+  ? String(players[0].Result).trim().toLowerCase()
+  : "";
+
+// Normalize lots of possible values
+const isWin =
+  rawResult.includes("win") ||
+  rawResult === "w" ||
+  rawResult === "1" ||
+  rawResult === "victory" ||
+  rawResult === "defender win" ||
+  rawResult === "attacker win";
+
+const isLoss =
+  rawResult.includes("loss") ||
+  rawResult === "l" ||
+  rawResult === "0" ||
+  rawResult === "defeat" ||
+  rawResult === "defender loss" ||
+  rawResult === "attacker loss";
+
+let outcomeText = "UNDECIDED";
+let outcomeColor = "text-yellow-300";
+
+if (isWin) {
+  outcomeText = "VICTORY";
+  outcomeColor = "text-green-400";
+} else if (isLoss) {
+  outcomeText = "DEFEAT";
+  outcomeColor = "text-red-400";
+}
 
         return (
-          <div className="flex justify-center items-center gap-6 text-xl font-semibold">
-            <span className="text-nw-parchment-soft">{defenderTeam}</span>
+          <div className="flex flex-col items-center gap-2">
+            {/* Teams */}
+            <div className="flex justify-center items-center gap-6 text-xl font-semibold">
+              <span className="text-nw-parchment-soft">{defenderTeam}</span>
 
-            <span className="text-nw-gold-soft text-3xl font-bold">
-              VS
-            </span>
+              <span className="text-nw-gold-soft text-3xl font-bold">
+                VS
+              </span>
 
-            <span className="text-nw-parchment-soft">{attackerTeam}</span>
+              <span className="text-nw-parchment-soft">{attackerTeam}</span>
+            </div>
+
+            {/* Result */}
+            <div className={`text-2xl font-bold mt-1 ${outcomeColor}`}>
+              {outcomeText}
+            </div>
           </div>
         );
       })()}
     </div>
   </section>
 )}
-
 
 {/* ----------------------------------------------------
 ARMY TOTALS — FULL WAR STATS
