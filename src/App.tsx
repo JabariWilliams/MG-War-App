@@ -11,6 +11,7 @@ import ArmyTotalsPanel from "./components/ArmyTotalsPanel";
 import WarLedgerTable from "./components/WarLedgerTable";
 import ArmyGroupsPanel from "./components/ArmyGroupsPanel";
 import AnalyticsPanel from "./components/analytics/AnalyticsPanel";
+import ClassComparison from "./components/ClassComparison";
 
 import { BUILD_PRIORITY, buildColors } from "./config/buildConfig";
 import useMatchup from "./hooks/useMatchup";
@@ -153,9 +154,12 @@ export default function App() {
         {/* ============================
             ANALYTICS VIEW
         ============================ */}
-        {view === "analytics" && players.length > 0 && (
-          <AnalyticsPanel players={players} />
-        )}
+        {view === "analytics" && players.length > 0 ? (
+          <>
+            <ClassComparison players={players} />
+            <AnalyticsPanel players={players} />
+          </>
+        ) : null}
 
       </main>
     </div>
