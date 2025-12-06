@@ -16,6 +16,7 @@ import PlayerProfilePage from "./components/PlayerProfilePage";
 import { BUILD_PRIORITY, buildColors } from "./config/buildConfig";
 import useMatchup from "./hooks/useMatchup";
 import useCSVLoader from "./hooks/useCSVLoader";
+import CompanyOverviewPage from "./components/CompanyOverviewPage";
 
 // recharts imports stay — even if unused
 import {
@@ -31,9 +32,10 @@ import {
 } from "recharts";
 
 export default function App() {
-  const [view, setView] = useState<"dashboard" | "analytics" | "player">(
-    "dashboard"
-  );
+  const [view, setView] = useState<
+    "overview" | "dashboard" | "analytics" | "player"
+  >("overview");
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<EnhancedPlayer | null>(
     null
@@ -56,9 +58,7 @@ export default function App() {
 
   const exportRef = useRef<HTMLDivElement | null>(null);
 
-  // ======================================================
-  // FIX: Re-sync selected player when players[] updates
-  // ======================================================
+  // Keep selected player synced with new players[] after war switch
   useEffect(() => {
     if (view === "player" && selectedPlayer) {
       const updated = players.find(
@@ -110,102 +110,122 @@ export default function App() {
       />
 
       <motion.main
-        key={selectedCSV} // important: triggers animation on war change
+        key={selectedCSV + view}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
         transition={{ duration: 0.35 }}
         className="md:ml-56 ml-0 max-w-[1800px] mx-auto px-4 py-5 space-y-6"
       >
-        {selectedCSV === "__none__" && (
-          <div className="text-center py-20 opacity-70">
-            <h2 className="text-3xl mb-3 font-semibold">
-              Welcome to the Mercguards War Ledger
-            </h2>
-            <p className="text-lg">Please select a war report from the menu.</p>
-          </div>
+
+        {/* ============================================
+            OVERVIEW PAGE
+        ============================================ */}
+        {view === "overview" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+          >
+            <CompanyOverviewPage allPlayersByWar={allPlayersByWar} />
+          </motion.div>
         )}
 
-        {view === "dashboard" && players.length > 0 && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-            >
-              <MatchupPanel
-                attackers={attackers}
-                defenders={defenders}
-                result={result}
-              />
-            </motion.div>
+        {/* ============================================
+            DASHBOARD PAGE
+        ============================================ */}
+        {view === "dashboard" &&
+          selectedCSV !== "__none__" &&
+          players.length > 0 && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <MatchupPanel
+                  attackers={attackers}
+                  defenders={defenders}
+                  result={result}
+                />
+              </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-            >
-              <ArmyTotalsPanel players={players} />
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <ArmyTotalsPanel players={players} />
+              </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-            >
-              <InsightsPanel players={players} buildColors={buildColors} />
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <InsightsPanel players={players} buildColors={buildColors} />
+              </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-            >
-              <WarLedgerTable
-                players={players}
-                buildColors={buildColors}
-                onPlayerClick={(player) => {
-                  setSelectedPlayer(player);
-                  setView("player");
-                }}
-              />
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <WarLedgerTable
+                  players={players}
+                  buildColors={buildColors}
+                  onPlayerClick={(player) => {
+                    setSelectedPlayer(player);
+                    setView("player");
+                  }}
+                />
+              </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-            >
-              <ArmyGroupsPanel
-                players={players}
-                buildColors={buildColors}
-                BUILD_PRIORITY={BUILD_PRIORITY}
-              />
-            </motion.div>
-          </>
-        )}
-        {view === "analytics" && players.length > 0 && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-            >
-              <MatchupPanel
-                attackers={attackers}
-                defenders={defenders}
-                result={result}
-              />
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-            >
-              <AnalyticsPanel players={players} />
-            </motion.div>
-          </>
-        )}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <ArmyGroupsPanel
+                  players={players}
+                  buildColors={buildColors}
+                  BUILD_PRIORITY={BUILD_PRIORITY}
+                />
+              </motion.div>
+            </>
+          )}
+
+        {/* ============================================
+            ANALYTICS PAGE
+        ============================================ */}
+        {view === "analytics" &&
+          selectedCSV !== "__none__" &&
+          players.length > 0 && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <MatchupPanel
+                  attackers={attackers}
+                  defenders={defenders}
+                  result={result}
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <AnalyticsPanel players={players} />
+              </motion.div>
+            </>
+          )}
+
+        {/* ============================================
+            PLAYER PROFILE PAGE
+        ============================================ */}
         {view === "player" && selectedPlayer && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -219,7 +239,6 @@ export default function App() {
               allPlayersByWar={allPlayersByWar}
               onBack={() => setView("dashboard")}
               onSelectWar={async (war) => {
-                // FIX: do NOT try to update selectedPlayer here (stale players)
                 setSelectedCSV(war);
                 await loadPublicCSV(war);
                 setView("player");

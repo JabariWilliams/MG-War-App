@@ -7,8 +7,8 @@ interface MobileMenuProps {
   selectedCSV: string;
   setSelectedCSV: (val: string) => void;
   loadPublicCSV: (file: string) => void;
-  view: "dashboard" | "analytics";
-  setView: (val: "dashboard" | "analytics") => void;
+  view: "overview" | "dashboard" | "analytics" | "player";
+  setView: (val: "overview" | "dashboard" | "analytics" | "player") => void;
 }
 
 export default function MobileMenu({
@@ -26,15 +26,13 @@ export default function MobileMenu({
 
   return (
     <>
-      {/* BACKDROP */}
       <div
         className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-200 ${
           mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={() => setMobileMenuOpen(false)}
-      ></div>
+      />
 
-      {/* SLIDE-IN PANEL */}
       <div
         className={`fixed top-0 left-0 h-full w-64 bg-black/80 border-r border-nw-gold/40 z-50 p-4 overflow-y-auto transform transition-transform duration-300 ${
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
@@ -47,6 +45,23 @@ export default function MobileMenu({
             Navigation
           </div>
 
+          {/* Overview */}
+          <button
+            onClick={() => {
+              setView("overview");
+              setSelectedCSV("__none__");
+              setMobileMenuOpen(false);
+            }}
+            className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+              view === "overview"
+                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                : "text-nw-parchment-soft"
+            }`}
+          >
+            Overview
+          </button>
+
+          {/* Dashboard */}
           <button
             onClick={() => {
               setView("dashboard");
@@ -61,6 +76,7 @@ export default function MobileMenu({
             Dashboard
           </button>
 
+          {/* Analytics */}
           <button
             onClick={() => {
               setView("analytics");
@@ -82,26 +98,13 @@ export default function MobileMenu({
             War Reports
           </div>
 
-          <button
-            onClick={() => {
-              setSelectedCSV("__none__");
-              setMobileMenuOpen(false);
-            }}
-            className={`block w-full text-left px-3 py-2 rounded mb-1 ${
-              selectedCSV === "__none__"
-                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-                : "text-nw-parchment-soft"
-            }`}
-          >
-            Overview
-          </button>
-
           {csvFiles.map((file) => (
             <button
               key={file}
               onClick={() => {
                 setSelectedCSV(file);
                 loadPublicCSV(file);
+                setView("dashboard");
                 setMobileMenuOpen(false);
               }}
               className={`block w-full text-left px-3 py-2 rounded mb-1 ${

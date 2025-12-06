@@ -1,12 +1,13 @@
 import React from "react";
+import { motion } from "framer-motion";
 
 interface SideMenuProps {
   csvFiles: string[];
   selectedCSV: string;
   setSelectedCSV: (val: string) => void;
   loadPublicCSV: (file: string) => void;
-  view: "dashboard" | "analytics";
-  setView: (val: "dashboard" | "analytics") => void;
+  view: "overview" | "dashboard" | "analytics" | "player";
+  setView: (val: "overview" | "dashboard" | "analytics" | "player") => void;
 }
 
 export default function SideMenu({
@@ -17,75 +18,115 @@ export default function SideMenu({
   view,
   setView,
 }: SideMenuProps) {
+  
   const formatCSVName = (name: string) =>
     name.replace(".csv", "").replace(/[_-]/g, " ");
 
+  // -----------------------------------------------------
+  // Animated Nav Button Component
+  // -----------------------------------------------------
+  const NavButton = ({
+    active,
+    label,
+    onClick,
+  }: {
+    active: boolean;
+    label: string;
+    onClick: () => void;
+  }) => (
+    <motion.button
+      onClick={onClick}
+      initial={false}
+      animate={{
+        backgroundColor: active ? "rgba(198,155,91,0.25)" : "rgba(0,0,0,0)",
+        color: active ? "#c6a675" : "#e9e5d8",
+        x: active ? 4 : 0,
+      }}
+      whileHover={{ x: 4 }}
+      transition={{ duration: 0.25 }}
+      className="relative block w-full text-left px-3 py-2 rounded mb-1"
+    >
+      {label}
+
+      {active && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="
+            absolute right-2 top-1/2 -translate-y-1/2 
+            w-2 h-2 rounded-full bg-nw-gold-soft
+            shadow-[0_0_8px_3px_rgba(198,166,117,0.6)]
+          "
+        />
+      )}
+    </motion.button>
+  );
+
   return (
     <aside
-      className="hidden md:block fixed left-0 top-0 h-full w-56 bg-black/60 border-r border-nw-gold/40 backdrop-blur-lg p-4 overflow-y-auto z-30"
+      className="
+        hidden md:block fixed left-0 top-0 
+        h-full w-56 
+        bg-black/60 backdrop-blur-lg 
+        border-r border-nw-gold/40 
+        p-4 overflow-y-auto z-30
+      "
       style={{ paddingTop: "70px" }}
     >
-      {/* NAVIGATION */}
+      {/* =============================
+          NAVIGATION SECTION
+      ============================== */}
       <div className="mb-6">
         <div className="text-nw-gold-soft text-lg font-bold mb-3">
           Navigation
         </div>
 
-        <button
-          onClick={() => setView("dashboard")}
-          className={`block w-full text-left px-3 py-2 rounded mb-1 ${
-            view === "dashboard"
-              ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-              : "text-nw-parchment-soft"
-          }`}
-        >
-          Dashboard
-        </button>
+        {/* Overview — clears war selection */}
+        <NavButton
+          active={view === "overview"}
+          label="Overview"
+          onClick={() => {
+            setView("overview");
+            setSelectedCSV("__none__"); // deselect all wars
+          }}
+        />
 
-        <button
+        <NavButton
+          active={view === "dashboard"}
+          label="Dashboard"
+          onClick={() => setView("dashboard")}
+        />
+
+        <NavButton
+          active={view === "analytics"}
+          label="Analytics"
           onClick={() => setView("analytics")}
-          className={`block w-full text-left px-3 py-2 rounded ${
-            view === "analytics"
-              ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-              : "text-nw-parchment-soft"
-          }`}
-        >
-          Analytics
-        </button>
+        />
       </div>
 
-      {/* WAR LIST */}
+      {/* =============================
+          WAR REPORTS LIST
+      ============================== */}
       <div>
         <div className="text-nw-gold-soft text-lg font-bold mb-3">
           War Reports
         </div>
 
-        <button
-          onClick={() => setSelectedCSV("__none__")}
-          className={`block w-full text-left px-3 py-2 rounded mb-1 ${
-            selectedCSV === "__none__"
-              ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-              : "text-nw-parchment-soft"
-          }`}
-        >
-          Overview
-        </button>
-
         {csvFiles.map((file) => (
-          <button
+          <NavButton
             key={file}
+            active={selectedCSV === file}
+            label={formatCSVName(file)}
             onClick={() => {
               setSelectedCSV(file);
               loadPublicCSV(file);
+
+              // Leaving Overview if user clicks a war
+              if (view === "overview") {
+                setView("dashboard");
+              }
             }}
-            className={`block w-full text-left px-3 py-2 rounded mb-1 ${
-              selectedCSV === file
-                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-                : "text-nw-parchment-soft"
-            }`}
-          >
-            {formatCSVName(file)}
-          </button>
+          />
         ))}
       </div>
     </aside>
