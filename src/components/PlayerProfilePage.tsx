@@ -20,34 +20,44 @@ export default function PlayerProfilePage({
 }: Props) {
 
   // ======================================================
-  //  SAFELY BUILD LIFETIME (ALL-WAR) STATS
+  //   FILTER WARS → ONLY SHOW WARS WHERE PLAYER EXISTS
   // ======================================================
-const lifetime = useMemo(() => {
-  if (!allPlayersByWar || Object.keys(allPlayersByWar).length === 0) return null;
+  const warsPlayerWasIn = useMemo(() => {
+    return allWars.filter((war) => {
+      const list = allPlayersByWar[war];
+      if (!list) return false;
 
-  // flatten all wars into 1 big list
-  const all = Object.values(allPlayersByWar).flat();
+      return list.some(
+        (p) => p.Player.trim().toLowerCase() === player.Player.toLowerCase()
+      );
+    });
+  }, [allWars, allPlayersByWar, player.Player]);
 
-  // filter for this player
-  const matches = all.filter(
-    (p) => p.Player.trim().toLowerCase() === player.Player.toLowerCase()
-  );
+  // ======================================================
+  //  SAFELY BUILD LIFETIME STATS (ONLY WARS THEY PLAYED)
+  // ======================================================
+  const lifetime = useMemo(() => {
+    const relevantWars = warsPlayerWasIn.map((w) => allPlayersByWar[w]).flat();
 
-  if (matches.length === 0) return null;
+    const matches = relevantWars.filter(
+      (p) => p.Player.trim().toLowerCase() === player.Player.toLowerCase()
+    );
 
-  const total = (key: keyof EnhancedPlayer) =>
-    matches.reduce((a, b) => a + (b[key] as number), 0);
+    if (matches.length === 0) return null;
 
-  return {
-    wars: matches.length,
-    kills: total("Kills"),
-    deaths: total("Deaths"),
-    assists: total("Assists"),
-    damage: total("Damage"),
-    healing: total("Healing"),
-    kp: matches.reduce((a, b) => a + b.KP, 0) / matches.length,
-  };
-}, [allPlayersByWar, player.Player]);
+    const total = (key: keyof EnhancedPlayer) =>
+      matches.reduce((a, b) => a + (b[key] as number), 0);
+
+    return {
+      wars: matches.length,
+      kills: total("Kills"),
+      deaths: total("Deaths"),
+      assists: total("Assists"),
+      damage: total("Damage"),
+      healing: total("Healing"),
+      kp: matches.reduce((a, b) => a + b.KP, 0) / matches.length,
+    };
+  }, [allPlayersByWar, warsPlayerWasIn, player.Player]);
 
   // ======================================================
   //  GUI
@@ -91,20 +101,19 @@ const lifetime = useMemo(() => {
       )}
 
       {/* ======================================================
-           WAR SWITCHER
+           WAR SWITCHER (FILTERED LIST)
       ====================================================== */}
-<div className="space-y-3 mt-6">
-  <label className="text-sm text-nw-parchment-soft block mb-1">
-    View this player in another war:
-  </label>
+      <div className="space-y-3 mt-6">
+        <label className="text-sm text-nw-parchment-soft block mb-1">
+          View this player in another war:
+        </label>
 
-  <select
-    value={currentWar}
-    onChange={(e) => onSelectWar(e.target.value)}
-    className="px-3 py-2 bg-[#1a1815] border border-nw-gold-soft/40 rounded text-nw-parchment-soft"
-  >
-
-          {allWars.map((w) => (
+        <select
+          value={currentWar}
+          onChange={(e) => onSelectWar(e.target.value)}
+          className="px-3 py-2 bg-[#1a1815] border border-nw-gold-soft/40 rounded text-nw-parchment-soft"
+        >
+          {warsPlayerWasIn.map((w) => (
             <option key={w} value={w}>
               {w.replace(".csv", "").replace(/_/g, " ")}
             </option>
