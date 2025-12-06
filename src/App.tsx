@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-
 import HeaderBar from "./components/layout/HeaderBar";
 import SideMenu from "./components/SideMenu";
 import MobileMenu from "./components/MobileMenu";
@@ -185,7 +184,6 @@ export default function App() {
             </motion.div>
           </>
         )}
-
         {view === "analytics" && players.length > 0 && (
           <>
             <motion.div
@@ -199,7 +197,6 @@ export default function App() {
                 result={result}
               />
             </motion.div>
-
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -209,7 +206,6 @@ export default function App() {
             </motion.div>
           </>
         )}
-
         {view === "player" && selectedPlayer && (
           <motion.div
             initial={{ opacity: 0 }}

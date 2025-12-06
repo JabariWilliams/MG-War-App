@@ -19,15 +19,12 @@ export default function useCSVLoader() {
   // -----------------------------
   const loadPublicCSV = async (filename: string) => {
     setLoadingCSV(true);
-
     const text = await fetch(`/${filename}`).then((r) => r.text());
-
     const rows: any[] = Papa.parse(text, {
       header: true,
       dynamicTyping: true,
       skipEmptyLines: true,
     }).data;
-
     const parsed: EnhancedPlayer[] = rows
       .map((row) => normalizeCSVRow(row))
       .filter(Boolean)
@@ -40,25 +37,20 @@ export default function useCSVLoader() {
     setPlayers(parsed.sort((a, b) => a.Rank - b.Rank));
     setLoadingCSV(false);
   };
-
   // -----------------------------
   // Load ALL wars (once only)
   // -----------------------------
   const loadAllWars = async () => {
     const out: Record<string, EnhancedPlayer[]> = {};
-
     for (const file of csvFiles) {
       const text = await fetch(`/${file}`).then((r) => r.text());
-
       const rows: any[] = Papa.parse(text, { header: true }).data;
-
       const parsed: EnhancedPlayer[] = rows
         .map((r) => normalizeCSVRow(r))
         .filter(Boolean) as EnhancedPlayer[];
 
       out[file] = parsed;
     }
-
     setAllPlayersByWar(out);
   };
 
