@@ -18,13 +18,9 @@ export default function SideMenu({
   view,
   setView,
 }: SideMenuProps) {
-  
   const formatCSVName = (name: string) =>
     name.replace(".csv", "").replace(/[_-]/g, " ");
 
-  // -----------------------------------------------------
-  // Animated Nav Button Component
-  // -----------------------------------------------------
   const NavButton = ({
     active,
     label,
@@ -47,16 +43,13 @@ export default function SideMenu({
       className="relative block w-full text-left px-3 py-2 rounded mb-1"
     >
       {label}
-
       {active && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="
-            absolute right-2 top-1/2 -translate-y-1/2 
-            w-2 h-2 rounded-full bg-nw-gold-soft
-            shadow-[0_0_8px_3px_rgba(198,166,117,0.6)]
-          "
+          className="absolute right-2 top-1/2 -translate-y-1/2 
+                     w-2 h-2 rounded-full bg-nw-gold-soft 
+                     shadow-[0_0_8px_3px_rgba(198,166,117,0.6)]"
         />
       )}
     </motion.button>
@@ -64,30 +57,35 @@ export default function SideMenu({
 
   return (
     <aside
-      className="
-        hidden md:block fixed left-0 top-0 
-        h-full w-56 
-        bg-black/60 backdrop-blur-lg 
-        border-r border-nw-gold/40 
-        p-4 overflow-y-auto z-30
-      "
+      className="hidden md:block fixed left-0 top-0 h-full w-56 bg-black/60 
+                 backdrop-blur-lg border-r border-nw-gold/40 p-4 
+                 overflow-y-auto z-30"
       style={{ paddingTop: "70px" }}
     >
-      {/* =============================
-          NAVIGATION SECTION
-      ============================== */}
+      {/* LOGO */}
+      <div className="flex flex-col items-center mb-6 mt-2">
+        <img
+          src="/assets/mercguards-logo.png"
+          alt="Mercguards Logo"
+          className="w-28 opacity-90 drop-shadow-lg"
+        />
+        <p className="mt-2 text-nw-gold-soft font-semibold text-sm tracking-wide">
+          MERCGUARDS
+        </p>
+      </div>
+
+      {/* NAVIGATION */}
       <div className="mb-6">
         <div className="text-nw-gold-soft text-lg font-bold mb-3">
           Navigation
         </div>
 
-        {/* Overview — clears war selection */}
         <NavButton
           active={view === "overview"}
           label="Overview"
           onClick={() => {
+            setSelectedCSV("__none__");
             setView("overview");
-            setSelectedCSV("__none__"); // deselect all wars
           }}
         />
 
@@ -104,9 +102,7 @@ export default function SideMenu({
         />
       </div>
 
-      {/* =============================
-          WAR REPORTS LIST
-      ============================== */}
+      {/* WAR REPORTS */}
       <div>
         <div className="text-nw-gold-soft text-lg font-bold mb-3">
           War Reports
@@ -120,11 +116,7 @@ export default function SideMenu({
             onClick={() => {
               setSelectedCSV(file);
               loadPublicCSV(file);
-
-              // Leaving Overview if user clicks a war
-              if (view === "overview") {
-                setView("dashboard");
-              }
+              if (view === "overview") setView("dashboard");
             }}
           />
         ))}

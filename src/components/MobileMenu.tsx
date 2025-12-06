@@ -21,11 +21,13 @@ export default function MobileMenu({
   view,
   setView,
 }: MobileMenuProps) {
+
   const formatCSVName = (name: string) =>
     name.replace(".csv", "").replace(/[_-]/g, " ");
 
   return (
     <>
+      {/* BACKDROP */}
       <div
         className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-200 ${
           mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -33,19 +35,31 @@ export default function MobileMenu({
         onClick={() => setMobileMenuOpen(false)}
       />
 
+      {/* SLIDE PANEL */}
       <div
         className={`fixed top-0 left-0 h-full w-64 bg-black/80 border-r border-nw-gold/40 z-50 p-4 overflow-y-auto transform transition-transform duration-300 ${
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{ paddingTop: "70px" }}
       >
+        {/* LOGO */}
+        <div className="flex flex-col items-center mb-6 mt-2">
+          <img
+            src="/assets/mercguards-logo.png"
+            alt="Mercguards Logo"
+            className="w-24 opacity-90 drop-shadow-lg"
+          />
+          <p className="mt-2 text-nw-gold-soft font-semibold text-sm tracking-wide">
+            MERCGUARDS
+          </p>
+        </div>
+
         {/* NAVIGATION */}
         <div className="mb-6">
           <div className="text-nw-gold-soft text-lg font-bold mb-3">
             Navigation
           </div>
 
-          {/* Overview */}
           <button
             onClick={() => {
               setView("overview");
@@ -61,7 +75,6 @@ export default function MobileMenu({
             Overview
           </button>
 
-          {/* Dashboard */}
           <button
             onClick={() => {
               setView("dashboard");
@@ -76,7 +89,6 @@ export default function MobileMenu({
             Dashboard
           </button>
 
-          {/* Analytics */}
           <button
             onClick={() => {
               setView("analytics");
@@ -92,7 +104,7 @@ export default function MobileMenu({
           </button>
         </div>
 
-        {/* WAR REPORTS LIST */}
+        {/* WAR REPORTS */}
         <div>
           <div className="text-nw-gold-soft text-lg font-bold mb-3">
             War Reports

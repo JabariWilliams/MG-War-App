@@ -15,9 +15,7 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
     const validWars = warKeys.filter((w) => Array.isArray(allPlayersByWar[w]));
     if (validWars.length === 0) return null;
 
-    // Flatten all players from all wars
     const all = validWars.flatMap((w) => allPlayersByWar[w] || []);
-
     if (all.length === 0) return null;
 
     // Summed totals
@@ -33,8 +31,8 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
       avgKills: totalKills / validWars.length,
       avgDeaths: totalDeaths / validWars.length,
       avgAssists: totalAssists / validWars.length,
-      avgDamage: totalDamage / validWars.length,   // ★ average damage
-      avgHealing: totalHealing / validWars.length, // ★ average healing
+      avgDamage: totalDamage / validWars.length,
+      avgHealing: totalHealing / validWars.length,
       avgKP,
     };
   }, [allPlayersByWar]);
@@ -48,28 +46,44 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
   }
 
   return (
-    <section className="nw-panel p-6 space-y-6">
-      <h2 className="nw-title text-nw-gold-soft text-3xl mb-4 w-full flex justify-center flex-nowrap gap-6">
-        New World Season 10 Company Overview 
-      </h2>
+    <section className="nw-panel p-6 space-y-8">
 
-      {/* Lifetime Company Stats */}
-<div className="w-full flex justify-center flex-nowrap gap-6 overflow-x-auto pb-3">
-  <Stat label="Wars Counted" value={summary.wars} />
-  <Stat label="Avg Kills / War" value={summary.avgKills.toFixed(1)} />
-  <Stat label="Avg Deaths / War" value={summary.avgDeaths.toFixed(1)} />
-  <Stat label="Avg Assists / War" value={summary.avgAssists.toFixed(1)} />
-  <Stat
-    label="Avg Damage"
-    value={Math.round(summary.avgDamage).toLocaleString()}
-  />
-  <Stat
-    label="Avg Healing"
-    value={Math.round(summary.avgHealing).toLocaleString()}
-  />
-  <Stat label="Avg KP%" value={summary.avgKP.toFixed(1) + "%"} />
-</div>
+      {/* LOGO */}
+      <div className="flex justify-center mb-2">
+        <img
+          src="/assets/mercguards-logo.png"
+          alt="Mercguards Crest"
+          className="w-24 h-24 md:w-32 md:h-32 object-cover"
+        />
+      </div>
 
+      {/* HEADERS */}
+      <div className="text-center space-y-1">
+        <h1 className="nw-title text-nw-gold-soft text-4xl">
+          MERCGUARDS
+        </h1>
+
+        <h2 className="nw-title text-nw-gold-soft text-xl opacity-90">
+          New World Season 10 Company Overview
+        </h2>
+      </div>
+
+      {/* LIFETIME COMPANY STATS */}
+      <div className="w-full flex justify-center flex-nowrap gap-6 overflow-x-auto pb-3">
+        <Stat label="Wars Counted" value={summary.wars} />
+        <Stat label="Avg Kills / War" value={summary.avgKills.toFixed(1)} />
+        <Stat label="Avg Deaths / War" value={summary.avgDeaths.toFixed(1)} />
+        <Stat label="Avg Assists / War" value={summary.avgAssists.toFixed(1)} />
+        <Stat
+          label="Avg Damage"
+          value={Math.round(summary.avgDamage).toLocaleString()}
+        />
+        <Stat
+          label="Avg Healing"
+          value={Math.round(summary.avgHealing).toLocaleString()}
+        />
+        <Stat label="Avg KP%" value={summary.avgKP.toFixed(1) + "%"} />
+      </div>
 
     </section>
   );
@@ -77,7 +91,7 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
 
 function Stat({ label, value }: { label: string; value: any }) {
   return (
-    <div className="p-3 bg-black/20 rounded text-center">
+    <div className="p-3 bg-black/20 rounded text-center min-w-[110px]">
       <p className="text-nw-parchment-soft text-sm">{label}</p>
       <p className="text-xl">{value}</p>
     </div>
