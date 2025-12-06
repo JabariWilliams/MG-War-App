@@ -1,6 +1,6 @@
 // Mercguards War Dashboard – Consolidated & Mobile-Safe Version
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 
 import HeaderBar from "./components/layout/HeaderBar";
@@ -57,6 +57,20 @@ export default function App() {
 
   const exportRef = useRef<HTMLDivElement | null>(null);
 
+  // ======================================================
+  // FIX: Re-sync selected player when players[] updates
+  // ======================================================
+  useEffect(() => {
+    if (view === "player" && selectedPlayer) {
+      const updated = players.find(
+        (p) =>
+          p.Player.trim().toLowerCase() ===
+          selectedPlayer.Player.trim().toLowerCase()
+      );
+      if (updated) setSelectedPlayer(updated);
+    }
+  }, [players]);
+
   return (
     <div className="min-h-screen bg-nw-obsidian text-nw-parchment-soft nw-bg font-body">
       {loadingCSV && (
@@ -96,14 +110,14 @@ export default function App() {
         selectedCSV={selectedCSV}
       />
 
-     <motion.main
-  key={selectedCSV}                  // important: triggers animation on war change
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  exit={{ opacity: 0 }}
-  transition={{ duration: 0.35 }}
-  className="md:ml-56 ml-0 max-w-[1800px] mx-auto px-4 py-5 space-y-6"
->
+      <motion.main
+        key={selectedCSV} // important: triggers animation on war change
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.35 }}
+        className="md:ml-56 ml-0 max-w-[1800px] mx-auto px-4 py-5 space-y-6"
+      >
         {selectedCSV === "__none__" && (
           <div className="text-center py-20 opacity-70">
             <h2 className="text-3xl mb-3 font-semibold">
@@ -209,16 +223,9 @@ export default function App() {
               allPlayersByWar={allPlayersByWar}
               onBack={() => setView("dashboard")}
               onSelectWar={async (war) => {
+                // FIX: do NOT try to update selectedPlayer here (stale players)
                 setSelectedCSV(war);
                 await loadPublicCSV(war);
-
-                const updated = players.find(
-                  (p) =>
-                    p.Player.trim().toLowerCase() ===
-                    selectedPlayer.Player.toLowerCase()
-                );
-                if (updated) setSelectedPlayer(updated);
-
                 setView("player");
               }}
             />
