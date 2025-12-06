@@ -24,7 +24,52 @@ export default function WarLedgerTable({
     >
       <h2 className="nw-title text-nw-gold-soft text-lg mb-3">Ranking</h2>
 
-      <div className="overflow-x-auto w-full">
+      {/* ============================================================
+          📱 MOBILE CARDS (visible < md)
+      ============================================================ */}
+      <div className="md:hidden space-y-3">
+        {players.map((p) => (
+          <div
+            key={p.Player}
+            onClick={() => onPlayerClick(p)}
+            className="p-3 rounded-lg bg-black/30 border border-nw-gold-soft/20 cursor-pointer hover:bg-black/40 transition"
+          >
+            <div className="flex justify-between">
+              <div>
+                <p className="text-nw-gold-soft font-semibold">{p.Player}</p>
+                <p className="text-xs text-nw-parchment-soft/70">
+                  Build: {p.buildType} • Group {p.Group}
+                </p>
+              </div>
+
+              <div
+                className="px-2 py-0.5 rounded-full text-[11px] uppercase border h-fit"
+                style={{
+                  backgroundColor: buildColors[p.buildType] + "26",
+                  color: buildColors[p.buildType],
+                  borderColor: buildColors[p.buildType] + "66",
+                }}
+              >
+                {p.buildType}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-sm mt-2">
+              <Stat label="Kills" value={p.Kills} />
+              <Stat label="Deaths" value={p.Deaths} />
+              <Stat label="Assists" value={p.Assists} />
+              <Stat label="Damage" value={p.Damage.toLocaleString()} />
+              <Stat label="Healing" value={p.Healing.toLocaleString()} />
+              <Stat label="KP%" value={p.KP.toFixed(1) + "%"} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ============================================================
+          🖥️ DESKTOP TABLE  (visible ≥ md)
+      ============================================================ */}
+      <div className="hidden md:block overflow-x-auto w-full">
         <table className="min-w-full text-sm border-collapse">
           <thead className="nw-sticky-header text-left text-nw-gold-soft text-xs md:text-sm">
             <tr>
@@ -79,5 +124,17 @@ export default function WarLedgerTable({
         </table>
       </div>
     </motion.section>
+  );
+}
+
+/* ============================================================
+    Small stat component for mobile card layout
+============================================================ */
+function Stat({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="bg-black/20 p-2 rounded text-center">
+      <p className="text-xs text-nw-parchment-soft/70">{label}</p>
+      <p className="text-sm font-semibold">{value}</p>
+    </div>
   );
 }
