@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 
 interface Player {
   Player: string;
@@ -38,7 +39,12 @@ export default function InsightsPanel({ players, buildColors }: InsightsPanelPro
   };
 
   return (
-    <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <motion.section
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+      className="grid grid-cols-1 md:grid-cols-4 gap-4"
+    >
       {insightConfigs.map(([title, stat]) => {
         const p = getTopPlayer(stat);
         if (!p) return null;
@@ -61,7 +67,6 @@ export default function InsightsPanel({ players, buildColors }: InsightsPanelPro
                 </p>
               </div>
 
-              {/* Build badge */}
               <span
                 className="px-2 py-0.5 rounded-full text-[15px] uppercase border"
                 style={{
@@ -76,6 +81,6 @@ export default function InsightsPanel({ players, buildColors }: InsightsPanelPro
           </article>
         );
       })}
-    </section>
+    </motion.section>
   );
 }

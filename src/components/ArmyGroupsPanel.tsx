@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 
 interface Player {
   Player: string;
@@ -24,10 +25,6 @@ export default function ArmyGroupsPanel({
 }: ArmyGroupsPanelProps) {
   if (!players || players.length === 0) return null;
 
-  // ======================
-  // SPLIT INTO GROUP LOGIC
-  // ======================
-
   const qdpsPlayers = players.filter((p) => p.buildType === "QDPS");
   const nonQDPS = players.filter((p) => p.buildType !== "QDPS");
 
@@ -47,9 +44,6 @@ export default function ArmyGroupsPanel({
     )
   );
 
-  // ======================
-  // QDPS TOTALS
-  // ======================
   const qdpsTotals = {
     kills: qdpsPlayers.reduce((a, p) => a + p.Kills, 0),
     deaths: qdpsPlayers.reduce((a, p) => a + p.Deaths, 0),
@@ -62,11 +56,13 @@ export default function ArmyGroupsPanel({
 
   return (
     <>
-      {/* ================================
-          ARMY GROUPS
-         ================================= */}
       {grouped.length > 0 && (
-        <section className="space-y-5 mb-10">
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          className="space-y-5 mb-10"
+        >
           <h2 className="nw-title text-nw-gold-soft text-lg">ARMY GROUPS</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6">
@@ -76,8 +72,7 @@ export default function ArmyGroupsPanel({
               const totalDamage = g.reduce((a, p) => a + p.Damage, 0);
               const totalHealing = g.reduce((a, p) => a + p.Healing, 0);
               const avgKP =
-                g.reduce((a, p) => a + p.KP, 0) /
-                Math.max(1, g.length);
+                g.reduce((a, p) => a + p.KP, 0) / Math.max(1, g.length);
 
               const groupNum = g[0]?.Group ?? idx + 1;
 
@@ -165,14 +160,16 @@ export default function ArmyGroupsPanel({
               );
             })}
           </div>
-        </section>
+        </motion.section>
       )}
 
-      {/* ================================
-          QDPS SQUAD
-         ================================= */}
       {qdpsPlayers.length > 0 && (
-        <section className="space-y-5 mb-10">
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          className="space-y-5 mb-10"
+        >
           <h2 className="nw-title text-nw-gold-soft text-lg">QUAD DPS</h2>
 
           <div className="nw-panel p-4 text-xs flex flex-col gap-3">
@@ -217,11 +214,9 @@ export default function ArmyGroupsPanel({
                       <span
                         className="px-2 py-0.5 rounded-full text-[10px] uppercase border flex-shrink-0"
                         style={{
-                          backgroundColor:
-                            buildColors[p.buildType] + "26",
+                          backgroundColor: buildColors[p.buildType] + "26",
                           color: buildColors[p.buildType],
-                          borderColor:
-                            buildColors[p.buildType] + "66",
+                          borderColor: buildColors[p.buildType] + "66",
                         }}
                       >
                         {p.buildType}
@@ -246,7 +241,7 @@ export default function ArmyGroupsPanel({
               ))}
             </ul>
           </div>
-        </section>
+        </motion.section>
       )}
     </>
   );

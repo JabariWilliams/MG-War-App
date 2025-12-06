@@ -10,86 +10,63 @@ export default function useCSVLoader() {
   const [csvFiles, setCsvFiles] = useState<string[]>([]);
   const [selectedCSV, setSelectedCSV] = useState("__none__");
 
-  // Load CSV from /public
-  const loadPublicCSV = (filename: string) => {
+  // NEW: store ALL wars' players here
+  const [allPlayersByWar, setAllPlayersByWar] =
+    useState<Record<string, EnhancedPlayer[]>>({});
+
+  // -----------------------------
+  // Load one CSV (current war)
+  // -----------------------------
+  const loadPublicCSV = async (filename: string) => {
     setLoadingCSV(true);
 
-    fetch(`/${filename}`)
-      .then((res) => res.text())
-      .then((csvText) => {
-        Papa.parse(csvText, {
-          header: true,
-          dynamicTyping: true,
-          skipEmptyLines: true,
-          complete: ({ data }) => {
-            const parsed: EnhancedPlayer[] = [];
+    const text = await fetch(`/${filename}`).then((r) => r.text());
 
-            for (const row of data as any[]) {
-              const normalized = normalizeCSVRow(row);
-              if (!normalized) continue;
-
-              parsed.push({
-                ...normalized,
-                KD: (normalized.Kills / Math.max(1, normalized.Deaths)).toFixed(2),
-                buildType: detectBuild(normalized.Build),
-              });
-            }
-
-            setPlayers(parsed.sort((a, b) => a.Rank - b.Rank));
-            setLoadingCSV(false);
-          },
-        });
-      });
-  };
-
-  // Manual CSV upload (local)
-  const handleCSV = (file: File) => {
-    Papa.parse(file, {
+    const rows: any[] = Papa.parse(text, {
       header: true,
       dynamicTyping: true,
       skipEmptyLines: true,
-      complete: ({ data }) => {
-        const parsed: EnhancedPlayer[] = [];
+    }).data;
 
-        for (const row of data as any[]) {
-          const normalized = normalizeCSVRow(row);
-          if (!normalized) continue;
+    const parsed: EnhancedPlayer[] = rows
+      .map((row) => normalizeCSVRow(row))
+      .filter(Boolean)
+      .map((p: any) => ({
+        ...p,
+        KD: (p.Kills / Math.max(1, p.Deaths)).toFixed(2),
+        buildType: detectBuild(p.Build),
+      }));
 
-          parsed.push({
-            ...normalized,
-            KD: (normalized.Kills / Math.max(1, normalized.Deaths)).toFixed(2),
-            buildType: detectBuild(normalized.Build),
-          });
-        }
-
-        setPlayers(parsed.sort((a, b) => a.Rank - b.Rank));
-      },
-    });
+    setPlayers(parsed.sort((a, b) => a.Rank - b.Rank));
+    setLoadingCSV(false);
   };
 
-  // Build groups from players
+  // -----------------------------
+  // Load ALL wars (once only)
+  // -----------------------------
+  const loadAllWars = async () => {
+    const out: Record<string, EnhancedPlayer[]> = {};
+
+    for (const file of csvFiles) {
+      const text = await fetch(`/${file}`).then((r) => r.text());
+
+      const rows: any[] = Papa.parse(text, { header: true }).data;
+
+      const parsed: EnhancedPlayer[] = rows
+        .map((r) => normalizeCSVRow(r))
+        .filter(Boolean) as EnhancedPlayer[];
+
+      out[file] = parsed;
+    }
+
+    setAllPlayersByWar(out);
+  };
+
   useEffect(() => {
-    if (players.length === 0) {
-      setGroups([]);
-      return;
-    }
+    if (csvFiles.length > 0) loadAllWars();
+  }, [csvFiles]);
 
-    const byGroup: Record<number, EnhancedPlayer[]> = {};
-
-    for (const p of players) {
-      if (!byGroup[p.Group]) byGroup[p.Group] = [];
-      byGroup[p.Group].push(p);
-    }
-
-    const sortedGroups = Object.keys(byGroup)
-      .map((g) => Number(g))
-      .sort((a, b) => a - b)
-      .map((g) => byGroup[g]);
-
-    setGroups(sortedGroups);
-  }, [players]);
-
-  // Load CSV manifest list from /public
+  // Load csv manifest list
   useEffect(() => {
     fetch("/csv-manifest.json")
       .then((res) => res.json())
@@ -105,6 +82,8 @@ export default function useCSVLoader() {
     selectedCSV,
     setSelectedCSV,
     loadPublicCSV,
-    handleCSV,
+    handleCSV: () => {},
+    allPlayersByWar,
+    currentWar: selectedCSV,
   };
 }

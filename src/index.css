@@ -54,3 +54,74 @@ body {
     inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
+/* =========================================
+   NEW WORLD TABLE STICKY HEADERS
+   ========================================= */
+.nw-sticky-header th {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(199, 169, 107, 0.35); /* gold */
+}
+
+.nw-sticky-header th:first-child {
+  border-left: 0;
+}
+
+.nw-sticky-header::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(246, 217, 141, 0.3);
+  pointer-events: none;
+}
+
+/* ====================================================
+   NEW WORLD UI AESTHETIC: PANELS, TITLES, ENGRAVING
+   ==================================================== */
+
+.nw-panel {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(199, 169, 107, 0.23);
+  border-radius: 12px;
+  padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.nw-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/textures/parchment.png");
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.nw-title {
+  font-family: "Trajan Pro", serif;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 4px rgba(246, 217, 141, 0.35);
+}
+
+.nw-subpanel {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(199, 169, 107, 0.18);
+  border-radius: 14px;
+}
+
+.nw-gold-outline {
+  box-shadow: 0 0 6px rgba(246, 217, 141, 0.3);
+}
+
+.nw-row-hover:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.05);
+  transition: 0.15s ease;
+}
+

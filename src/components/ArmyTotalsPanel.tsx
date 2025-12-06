@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 
 interface Player {
   Kills: number;
@@ -24,8 +25,12 @@ export default function ArmyTotalsPanel({ players }: ArmyTotalsPanelProps) {
   const kdr = totalKills / Math.max(1, totalDeaths);
 
   return (
-    <section className="nw-panel p-4 mb-4 space-y-6">
-      {/* Row 1 */}
+    <motion.section
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+      className="nw-panel p-4 mb-4 space-y-6"
+    >
       <div className="grid grid-cols-2 md:grid-cols-4 text-center text-sm text-nw-parchment-soft/90 divide-x divide-nw-gold/20">
         <div className="px-2">
           <div className="uppercase text-[28px] text-nw-parchment-soft/60">
@@ -66,7 +71,6 @@ export default function ArmyTotalsPanel({ players }: ArmyTotalsPanelProps) {
 
       <div className="border-t border-nw-gold/20"></div>
 
-      {/* Row 2 */}
       <div className="grid grid-cols-2 text-center text-sm text-nw-parchment-soft/90 divide-x divide-nw-gold/20">
         <div className="px-2">
           <div className="uppercase text-[28px] text-nw-parchment-soft/60">
@@ -86,6 +90,6 @@ export default function ArmyTotalsPanel({ players }: ArmyTotalsPanelProps) {
           </div>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }
