@@ -23,6 +23,7 @@ export default function WarLedgerTable({
       className="nw-panel p-4"
     >
       <h2 className="nw-title text-nw-gold-soft text-lg mb-3">Ranking</h2>
+      <p className="text-sm text-nw-parchment-soft/80 mb-2">Click a player to open their profile</p>
 
       {/* ============================================================
           📱 MOBILE CARDS (visible < md)

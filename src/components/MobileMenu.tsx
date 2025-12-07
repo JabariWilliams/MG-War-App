@@ -7,8 +7,8 @@ interface MobileMenuProps {
   selectedCSV: string;
   setSelectedCSV: (val: string) => void;
   loadPublicCSV: (file: string) => void;
-  view: "overview" | "dashboard" | "analytics" | "player";
-  setView: (val: "overview" | "dashboard" | "analytics" | "player") => void;
+  view: "overview" | "dashboard" | "analytics" | "player" | "legacy";
+  setView: (val: "overview" | "dashboard" | "analytics" | "player" | "legacy") => void;
 }
 
 export default function MobileMenu({
@@ -110,6 +110,23 @@ export default function MobileMenu({
             War Reports
           </div>
 
+          {/* ---- Legacy Stats (NEW) ---- */}
+          <button
+            onClick={() => {
+              setView("legacy");
+              setSelectedCSV("__none__");
+              setMobileMenuOpen(false);
+            }}
+            className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+              view === "legacy"
+                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                : "text-nw-parchment-soft"
+            }`}
+          >
+             Legacy Stats
+          </button>
+
+          {/* CSV list */}
           {csvFiles.map((file) => (
             <button
               key={file}

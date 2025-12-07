@@ -2,23 +2,29 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
+
 import HeaderBar from "./components/layout/HeaderBar";
 import SideMenu from "./components/SideMenu";
 import MobileMenu from "./components/MobileMenu";
+
 import MatchupPanel from "./components/MatchupPanel";
 import InsightsPanel from "./components/InsightsPanel";
 import ArmyTotalsPanel from "./components/ArmyTotalsPanel";
 import WarLedgerTable from "./components/WarLedgerTable";
 import ArmyGroupsPanel from "./components/ArmyGroupsPanel";
 import AnalyticsPanel from "./components/analytics/AnalyticsPanel";
-import { EnhancedPlayer } from "./utils/csvParser";
+
 import PlayerProfilePage from "./components/PlayerProfilePage";
+import CompanyOverviewPage from "./components/CompanyOverviewPage";
+import LegacyStatsPage from "./components/LegacyStatsPage";
+
+import { EnhancedPlayer } from "./utils/csvParser";
 import { BUILD_PRIORITY, buildColors } from "./config/buildConfig";
+
 import useMatchup from "./hooks/useMatchup";
 import useCSVLoader from "./hooks/useCSVLoader";
-import CompanyOverviewPage from "./components/CompanyOverviewPage";
 
-// recharts imports stay — even if unused
+// recharts imports stay
 import {
   BarChart,
   Bar,
@@ -33,7 +39,7 @@ import {
 
 export default function App() {
   const [view, setView] = useState<
-    "overview" | "dashboard" | "analytics" | "player"
+    "overview" | "dashboard" | "analytics" | "player" | "legacy"
   >("overview");
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -55,10 +61,9 @@ export default function App() {
   } = useCSVLoader();
 
   const { attackers, defenders, result } = useMatchup(players);
-
   const exportRef = useRef<HTMLDivElement | null>(null);
 
-  // Keep selected player synced with new players[] after war switch
+  // Fix selected player when switching wars
   useEffect(() => {
     if (view === "player" && selectedPlayer) {
       const updated = players.find(
@@ -72,6 +77,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-nw-obsidian text-nw-parchment-soft nw-bg font-body">
+      {/* LOADING OVERLAY */}
       {loadingCSV && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="text-center animate-fadeIn">
@@ -83,6 +89,7 @@ export default function App() {
         </div>
       )}
 
+      {/* MENU SYSTEM */}
       <SideMenu
         csvFiles={csvFiles}
         selectedCSV={selectedCSV}
@@ -109,6 +116,9 @@ export default function App() {
         selectedCSV={selectedCSV}
       />
 
+      {/* ============================================
+          MAIN CONTENT
+      ============================================ */}
       <motion.main
         key={selectedCSV + view}
         initial={{ opacity: 0 }}
@@ -117,9 +127,7 @@ export default function App() {
         className="md:ml-56 ml-0 max-w-[1800px] mx-auto px-4 py-5 space-y-6"
       >
 
-        {/* ============================================
-            OVERVIEW PAGE
-        ============================================ */}
+        {/* OVERVIEW PAGE */}
         {view === "overview" && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -130,18 +138,23 @@ export default function App() {
           </motion.div>
         )}
 
-        {/* ============================================
-            DASHBOARD PAGE
-        ============================================ */}
+        {/* LEGACY STATS PAGE */}
+        {view === "legacy" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+          >
+            <LegacyStatsPage />
+          </motion.div>
+        )}
+
+        {/* DASHBOARD PAGE */}
         {view === "dashboard" &&
           selectedCSV !== "__none__" &&
           players.length > 0 && (
             <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-              >
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <MatchupPanel
                   attackers={attackers}
                   defenders={defenders}
@@ -149,27 +162,15 @@ export default function App() {
                 />
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-              >
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <ArmyTotalsPanel players={players} />
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-              >
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <InsightsPanel players={players} buildColors={buildColors} />
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-              >
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <WarLedgerTable
                   players={players}
                   buildColors={buildColors}
@@ -180,11 +181,7 @@ export default function App() {
                 />
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-              >
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <ArmyGroupsPanel
                   players={players}
                   buildColors={buildColors}
@@ -194,18 +191,12 @@ export default function App() {
             </>
           )}
 
-        {/* ============================================
-            ANALYTICS PAGE
-        ============================================ */}
+        {/* ANALYTICS PAGE */}
         {view === "analytics" &&
           selectedCSV !== "__none__" &&
           players.length > 0 && (
             <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-              >
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <MatchupPanel
                   attackers={attackers}
                   defenders={defenders}
@@ -213,25 +204,15 @@ export default function App() {
                 />
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-              >
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <AnalyticsPanel players={players} />
               </motion.div>
             </>
           )}
 
-        {/* ============================================
-            PLAYER PROFILE PAGE
-        ============================================ */}
+        {/* PLAYER PAGE */}
         {view === "player" && selectedPlayer && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <PlayerProfilePage
               player={selectedPlayer}
               currentWar={selectedCSV}

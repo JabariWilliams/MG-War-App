@@ -19,9 +19,6 @@ export default function PlayerProfilePage({
   onBack
 }: Props) {
 
-  // ======================================================
-  //   FILTER WARS → ONLY SHOW WARS WHERE PLAYER EXISTS
-  // ======================================================
   const warsPlayerWasIn = useMemo(() => {
     return allWars.filter((war) => {
       const list = allPlayersByWar[war];
@@ -33,9 +30,6 @@ export default function PlayerProfilePage({
     });
   }, [allWars, allPlayersByWar, player.Player]);
 
-  // ======================================================
-  //  SAFELY BUILD LIFETIME STATS (ONLY WARS THEY PLAYED)
-  // ======================================================
   const lifetime = useMemo(() => {
     const relevantWars = warsPlayerWasIn.map((w) => allPlayersByWar[w]).flat();
 
@@ -59,13 +53,9 @@ export default function PlayerProfilePage({
     };
   }, [allPlayersByWar, warsPlayerWasIn, player.Player]);
 
-  // ======================================================
-  //  GUI
-  // ======================================================
   return (
     <section className="nw-panel p-6 space-y-8">
 
-      {/* Back button */}
       <button
         onClick={onBack}
         className="px-4 py-2 bg-nw-gold-soft/20 border border-nw-gold-soft 
@@ -73,35 +63,51 @@ export default function PlayerProfilePage({
         ← Back
       </button>
 
-      {/* Player Name */}
       <h2 className="nw-title text-nw-gold-soft text-3xl">
         {player.Player}
       </h2>
 
-      {/* ======================================================
-           LIFETIME / ALL WAR AVERAGE SECTION
-      ====================================================== */}
-      {lifetime ? (
-        <div className="space-y-3">
-          <h3 className="text-xl text-nw-gold-soft">Lifetime (All Wars)</h3>
+{/* ======================================================
+     LIFETIME — NOW ALWAYS 1 FULL-WIDTH ROW
+====================================================== */}
+{lifetime ? (
+  <div className="space-y-3">
+    <h3 className="text-xl text-nw-gold-soft">Lifetime (All Wars)</h3>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Stat label="Wars Played" value={lifetime.wars} />
-            <Stat label="Avg Kills" value={(lifetime.kills / lifetime.wars).toFixed(1)} />
-            <Stat label="Avg Assists" value={(lifetime.assists / lifetime.wars).toFixed(1)} />
-            <Stat label="Avg Damage" value={Math.round(lifetime.damage / lifetime.wars).toLocaleString()} />
-            <Stat label="Avg Healing" value={Math.round(lifetime.healing / lifetime.wars).toLocaleString()} />
-            <Stat label="Avg KP%" value={lifetime.kp.toFixed(1) + "%"} />
-          </div>
-        </div>
-      ) : (
-        <p className="text-nw-parchment-soft opacity-70">
-          Loading lifetime stats…
-        </p>
-      )}
+    <div
+      className="
+        w-full 
+        flex flex-nowrap 
+        justify-center 
+        gap-6 
+        overflow-x-auto 
+        pb-2
+      "
+    >
+      <Stat label="Wars Played" value={lifetime.wars} />
+      <Stat label="Avg Kills" value={(lifetime.kills / lifetime.wars).toFixed(1)} />
+      <Stat label="Avg Deaths" value={(lifetime.deaths / lifetime.wars).toFixed(1)} />
+      <Stat label="Avg Assists" value={(lifetime.assists / lifetime.wars).toFixed(1)} />
+      <Stat
+        label="Avg Damage"
+        value={Math.round(lifetime.damage / lifetime.wars).toLocaleString()}
+      />
+      <Stat
+        label="Avg Healing"
+        value={Math.round(lifetime.healing / lifetime.wars).toLocaleString()}
+      />
+      <Stat label="Avg KP%" value={lifetime.kp.toFixed(1) + "%"} />
+    </div>
+  </div>
+) : (
+  <p className="text-nw-parchment-soft opacity-70">
+    Loading lifetime stats…
+  </p>
+)}
+
 
       {/* ======================================================
-           WAR SWITCHER (FILTERED LIST)
+          WAR SWITCHER
       ====================================================== */}
       <div className="space-y-3 mt-6">
         <label className="text-sm text-nw-parchment-soft block mb-1">
@@ -122,7 +128,7 @@ export default function PlayerProfilePage({
       </div>
 
       {/* ======================================================
-           CURRENT WAR SECTION
+          THIS WAR (unchanged)
       ====================================================== */}
       <div className="space-y-3">
         <h3 className="text-xl text-nw-gold-soft">This War</h3>
@@ -141,10 +147,9 @@ export default function PlayerProfilePage({
   );
 }
 
-// Reusable stat card
 function Stat({ label, value }: { label: string; value: any }) {
   return (
-    <div className="p-3 bg-black/20 rounded text-center">
+    <div className="p-3 bg-black/20 rounded text-center min-w-[120px]">
       <p className="text-nw-parchment-soft text-sm">{label}</p>
       <p className="text-xl">{value}</p>
     </div>

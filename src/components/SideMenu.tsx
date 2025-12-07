@@ -6,8 +6,8 @@ interface SideMenuProps {
   selectedCSV: string;
   setSelectedCSV: (val: string) => void;
   loadPublicCSV: (file: string) => void;
-  view: "overview" | "dashboard" | "analytics" | "player";
-  setView: (val: "overview" | "dashboard" | "analytics" | "player") => void;
+  view: "overview" | "dashboard" | "analytics" | "player" | "legacy";
+  setView: (val: "overview" | "dashboard" | "analytics" | "player" | "legacy") => void;
 }
 
 export default function SideMenu({
@@ -18,9 +18,13 @@ export default function SideMenu({
   view,
   setView,
 }: SideMenuProps) {
+
   const formatCSVName = (name: string) =>
     name.replace(".csv", "").replace(/[_-]/g, " ");
 
+  // -----------------------------------------------------
+  // Animated Nav Button
+  // -----------------------------------------------------
   const NavButton = ({
     active,
     label,
@@ -43,13 +47,16 @@ export default function SideMenu({
       className="relative block w-full text-left px-3 py-2 rounded mb-1"
     >
       {label}
+
       {active && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 
-                     w-2 h-2 rounded-full bg-nw-gold-soft 
-                     shadow-[0_0_8px_3px_rgba(198,166,117,0.6)]"
+          className="
+            absolute right-2 top-1/2 -translate-y-1/2 
+            w-2 h-2 rounded-full bg-nw-gold-soft
+            shadow-[0_0_8px_3px_rgba(198,166,117,0.6)]
+          "
         />
       )}
     </motion.button>
@@ -57,9 +64,13 @@ export default function SideMenu({
 
   return (
     <aside
-      className="hidden md:block fixed left-0 top-0 h-full w-56 bg-black/60 
-                 backdrop-blur-lg border-r border-nw-gold/40 p-4 
-                 overflow-y-auto z-30"
+      className="
+        hidden md:block fixed left-0 top-0 
+        h-full w-56 
+        bg-black/60 backdrop-blur-lg 
+        border-r border-nw-gold/40 
+        p-4 overflow-y-auto z-30
+      "
       style={{ paddingTop: "70px" }}
     >
       {/* LOGO */}
@@ -108,6 +119,17 @@ export default function SideMenu({
           War Reports
         </div>
 
+        {/* ---- Legacy Stats (NEW) ---- */}
+        <NavButton
+          active={view === "legacy"}
+          label=" Legacy Stats"
+          onClick={() => {
+            setSelectedCSV("__none__");
+            setView("legacy");
+          }}
+        />
+
+        {/* CSV files */}
         {csvFiles.map((file) => (
           <NavButton
             key={file}
@@ -116,7 +138,8 @@ export default function SideMenu({
             onClick={() => {
               setSelectedCSV(file);
               loadPublicCSV(file);
-              if (view === "overview") setView("dashboard");
+              if (view === "overview" || view === "legacy")
+                setView("dashboard");
             }}
           />
         ))}
