@@ -47,17 +47,17 @@ export default function App() {
     null
   );
 
+  // ⭐ Corrected destructuring – includes fullWarsByWar
   const {
     players,
-    groups,
     loadingCSV,
     csvFiles,
     selectedCSV,
     setSelectedCSV,
     loadPublicCSV,
-    handleCSV,
-    currentWar,
     allPlayersByWar,
+    fullWarsByWar,        // <-- FIXED
+    currentWar,
   } = useCSVLoader();
 
   const { attackers, defenders, result } = useMatchup(players);
@@ -134,7 +134,10 @@ export default function App() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
           >
-            <CompanyOverviewPage allPlayersByWar={allPlayersByWar} />
+            <CompanyOverviewPage 
+              allPlayersByWar={allPlayersByWar}
+              fullWarsByWar={fullWarsByWar}   // <-- FIXED
+            />
           </motion.div>
         )}
 
@@ -211,22 +214,26 @@ export default function App() {
           )}
 
         {/* PLAYER PAGE */}
-        {view === "player" && selectedPlayer && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <PlayerProfilePage
-              player={selectedPlayer}
-              currentWar={selectedCSV}
-              allWars={csvFiles}
-              allPlayersByWar={allPlayersByWar}
-              onBack={() => setView("dashboard")}
-              onSelectWar={async (war) => {
-                setSelectedCSV(war);
-                await loadPublicCSV(war);
-                setView("player");
-              }}
-            />
-          </motion.div>
-        )}
+{view === "player" && selectedPlayer && (
+  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+
+    {/* Player Profile Page */}
+    <PlayerProfilePage
+      player={selectedPlayer}
+      currentWar={selectedCSV}
+      allWars={csvFiles}
+      allPlayersByWar={allPlayersByWar}
+      fullWarsByWar={fullWarsByWar}
+      onBack={() => setView("dashboard")}
+      onSelectWar={async (war) => {
+        setSelectedCSV(war);
+        await loadPublicCSV(war);
+        setView("player");
+      }}
+    />
+
+  </motion.div>
+)}
       </motion.main>
     </div>
   );

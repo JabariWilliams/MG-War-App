@@ -6,23 +6,26 @@ interface Props {
 }
 
 export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
+
   const summary = useMemo(() => {
     if (!allPlayersByWar) return null;
 
     const warKeys = Object.keys(allPlayersByWar);
     if (warKeys.length === 0) return null;
 
+    // ----------------------------------------------------
+    // VALID WARS (Any non-empty array)
+    // ----------------------------------------------------
     const validWars = warKeys.filter((w) => Array.isArray(allPlayersByWar[w]));
     if (validWars.length === 0) return null;
 
-    const all = validWars.flatMap((w) => allPlayersByWar[w] || []);
-    if (all.length === 0) return null;
-
-    // COUNT REAL (CSV) WARS
+    // ----------------------------------------------------
+    // REAL WAR COUNT (all CSV wars)
+    // ----------------------------------------------------
     const realWarCount = validWars.length;
 
     // ----------------------------------------------------
-    // WIN / LOSS DETECTION (ONLY REAL WARS)
+    // WIN / LOSS — ALL WARS INCLUDED
     // ----------------------------------------------------
     let winsReal = 0;
     let lossesReal = 0;
@@ -31,56 +34,83 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
       const entries = allPlayersByWar[war];
       if (!entries || entries.length === 0) continue;
 
-      const row = entries[0];
       const result =
-        (row.Result || row.result || "").toString().trim().toLowerCase();
+        (entries[0].Result || entries[0].result || "")
+          .toString()
+          .trim()
+          .toLowerCase();
 
       if (result.includes("win")) winsReal++;
       else if (result.includes("loss")) lossesReal++;
     }
 
     // ----------------------------------------------------
-    // LEGACY VALUES
+    // LEGACY STATIC VALUES
     // ----------------------------------------------------
     const legacyWins = 1;
     const legacyLosses = 3;
-    const legacyWars = 4; // 1 win + 3 losses
+    const legacyWars = 4;
 
-    // FINAL WIN / LOSS / WAR COUNT
     const totalWins = winsReal + legacyWins;
     const totalLosses = lossesReal + legacyLosses;
     const warsCounted = realWarCount + legacyWars;
 
-    // ----------------------------------------------------
-    // SUM TOTALS (REAL DATA ONLY)
-    // ----------------------------------------------------
-    const totalKills = all.reduce((a, p) => a + (p.Kills || 0), 0);
-    const totalDeaths = all.reduce((a, p) => a + (p.Deaths || 0), 0);
-    const totalDamage = all.reduce((a, p) => a + (p.Damage || 0), 0);
-    const totalHealing = all.reduce((a, p) => a + (p.Healing || 0), 0);
+    // ----------------------------------------------------------
+    // FULL WARS FOR AVERAGES ONLY
+    // A war counts as FULL ONLY IF EVERY row has Full === "yes"
+    // ----------------------------------------------------------
+    const fullWarKeys = validWars.filter((war) => {
+      const rows = allPlayersByWar[war];
+      return rows.length > 0 && rows.every((p) => p.Full === "yes");
+    });
+
+    if (fullWarKeys.length === 0) {
+      return {
+        wars: warsCounted,
+        wins: totalWins,
+        losses: totalLosses,
+        avgKills: 0,
+        avgDeaths: 0,
+        avgDamage: 0,
+        avgHealing: 0,
+        avgKP: 0,
+      };
+    }
+
+    // Flatten only FULL=yes wars
+    const fullRows = fullWarKeys.flatMap((w) => allPlayersByWar[w]);
 
     // ----------------------------------------------------
-    // AVERAGES = REAL WARS ONLY ❗
-    // (NOT INCLUDING LEGACY)
+    // TOTALS FOR FULL WARS ONLY (NOT ALL WARS)
     // ----------------------------------------------------
-    const avgKills = totalKills / realWarCount;
-    const avgDeaths = totalDeaths / realWarCount;
-    const avgDamage = totalDamage / realWarCount;
-    const avgHealing = totalHealing / realWarCount;
+    const totalKills = fullRows.reduce((a, p) => a + (p.Kills || 0), 0);
+    const totalDeaths = fullRows.reduce((a, p) => a + (p.Deaths || 0), 0);
+    const totalDamage = fullRows.reduce((a, p) => a + (p.Damage || 0), 0);
+    const totalHealing = fullRows.reduce((a, p) => a + (p.Healing || 0), 0);
+    const totalKP = fullRows.reduce((a, p) => a + (p.KP || 0), 0);
 
-    const avgKP = all.reduce((a, p) => a + (p.KP || 0), 0) / all.length;
+    // ----------------------------------------------------
+    // AVERAGES DIVIDE BY FULL WAR COUNT ONLY
+    // ----------------------------------------------------
+    const fullWarCount = fullWarKeys.length;
+
+    const avgKills = totalKills / fullWarCount;
+    const avgDeaths = totalDeaths / fullWarCount;
+    const avgDamage = totalDamage / fullWarCount;
+    const avgHealing = totalHealing / fullWarCount;
+    const avgKP = totalKP / fullRows.length;
 
     return {
-      wars: warsCounted, // includes legacy
+      wars: warsCounted,
       wins: totalWins,
       losses: totalLosses,
-
       avgKills,
       avgDeaths,
       avgDamage,
       avgHealing,
       avgKP,
     };
+
   }, [allPlayersByWar]);
 
   if (!summary) {
@@ -111,7 +141,7 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
         </h2>
       </div>
 
-      {/* LIFETIME COMPANY STATS */}
+      {/* COMPANY STATS */}
       <div className="w-full flex justify-center flex-nowrap gap-6 overflow-x-auto pb-3">
 
         <Stat label="Wars Counted" value={summary.wars} />
@@ -130,7 +160,11 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
         />
         <Stat label="Avg KP%" value={summary.avgKP.toFixed(1) + "%"} />
       </div>
-
+	  <div className="flex justify-end pr-2">
+  <p className="text-xs text-nw-parchment-soft opacity-60 italic">
+    * Wars under the cutoff time are excluded from averages
+  </p>
+</div>
     </section>
   );
 }

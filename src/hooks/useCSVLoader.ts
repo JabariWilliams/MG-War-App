@@ -4,30 +4,34 @@ import { EnhancedPlayer, normalizeCSVRow, detectBuild } from "../utils/csvParser
 
 export default function useCSVLoader() {
   const [players, setPlayers] = useState<EnhancedPlayer[]>([]);
-  const [groups, setGroups] = useState<EnhancedPlayer[][]>([]);
   const [loadingCSV, setLoadingCSV] = useState(false);
 
   const [csvFiles, setCsvFiles] = useState<string[]>([]);
   const [selectedCSV, setSelectedCSV] = useState("__none__");
 
+  // ALL wars loaded raw
   const [allPlayersByWar, setAllPlayersByWar] =
     useState<Record<string, EnhancedPlayer[]>>({});
 
+  // ONLY Full="yes" wars
+  const [fullWarsByWar, setFullWarsByWar] =
+    useState<Record<string, EnhancedPlayer[]>>({});
+
   // ----------------------------------------------------
-  // Load ONE CSV (current war)
+  // Load a single selected CSV
   // ----------------------------------------------------
   const loadPublicCSV = async (filename: string) => {
     setLoadingCSV(true);
 
     const text = await fetch(`/${filename}`).then((r) => r.text());
-    const rows: any[] = Papa.parse(text, {
+    const rows = Papa.parse(text, {
       header: true,
       dynamicTyping: true,
       skipEmptyLines: true,
     }).data;
 
     const parsed: EnhancedPlayer[] = rows
-      .map((row) => normalizeCSVRow(row))
+      .map((row: any) => normalizeCSVRow(row))
       .filter(Boolean)
       .map((p: any) => ({
         ...p,
@@ -40,11 +44,11 @@ export default function useCSVLoader() {
   };
 
   // ----------------------------------------------------
-  // Load ALL wars (once)
-  // with SAFE Full=yes/no filtering
+  // Load ALL wars: full and non-full
   // ----------------------------------------------------
   const loadAllWars = async () => {
-    const out: Record<string, EnhancedPlayer[]> = {};
+    const all: Record<string, EnhancedPlayer[]> = {};
+    const fullOnly: Record<string, EnhancedPlayer[]> = {};
 
     for (const file of csvFiles) {
       const text = await fetch(`/${file}`).then((r) => r.text());
@@ -54,21 +58,19 @@ export default function useCSVLoader() {
         .map((r) => normalizeCSVRow(r))
         .filter(Boolean) as EnhancedPlayer[];
 
-      // ----- New logic -----
-      // A war should be removed ONLY if:
-      // EVERY row is truly "no"
-      const hasAtLeastOneFullYes = parsed.some((p) => p.Full === "yes");
+      if (parsed.length === 0) continue;
 
-      if (!hasAtLeastOneFullYes) {
-        // drop the war — but ONLY if it is fully marked "no"
-        continue;
+      // Save ALL wars
+      all[file] = parsed;
+
+      // Save ONLY full=yes wars
+      if (parsed[0].Full === "yes") {
+        fullOnly[file] = parsed;
       }
-
-      // keep entire war
-      out[file] = parsed;
     }
 
-    setAllPlayersByWar(out);
+    setAllPlayersByWar(all);
+    setFullWarsByWar(fullOnly);
   };
 
   useEffect(() => {
@@ -77,21 +79,20 @@ export default function useCSVLoader() {
 
   useEffect(() => {
     fetch("/csv-manifest.json")
-      .then((res) => res.json())
+      .then((r) => r.json())
       .then((list) => setCsvFiles(list))
       .catch(() => setCsvFiles([]));
   }, []);
 
   return {
     players,
-    groups,
     loadingCSV,
     csvFiles,
     selectedCSV,
     setSelectedCSV,
     loadPublicCSV,
-    handleCSV: () => {},
-    allPlayersByWar,
+    allPlayersByWar,  // ALL wars
+    fullWarsByWar,    // FULL WARS ONLY
     currentWar: selectedCSV,
   };
 }

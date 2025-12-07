@@ -53,7 +53,7 @@ export interface EnhancedPlayer {
   Attacker: string;
   buildType: Build;
   Result: string;
-  Full: string; // <-- normalized yes/no
+  Full: string; // yes/no war-level flag
 }
 
 // ===============================
@@ -65,9 +65,8 @@ export function normalizeCSVRow(raw: any): EnhancedPlayer | null {
   const num = (v: any) =>
     Number(String(v || "0").replace(/,/g, "").replace("%", "")) || 0;
 
-  // ----- Normalized Full flag -----
+  // ⭐ Normalize Full once — row-level, but used WAR-LEVEL in loader
   const rawFull = raw.Full ? String(raw.Full).trim().toLowerCase() : "";
-
   const fullNormalized =
     rawFull === "no" || rawFull === "n" || rawFull === "false"
       ? "no"
@@ -91,13 +90,13 @@ export function normalizeCSVRow(raw: any): EnhancedPlayer | null {
     Defender: raw.Defender ? String(raw.Defender).trim() : "",
     Attacker: raw.Attacker ? String(raw.Attacker).trim() : "",
     Result: raw.Result ? String(raw.Result).trim() : "",
-    Full: fullNormalized,
+    Full: fullNormalized, // now used ONLY at war-level externally
     buildType: detectBuild(String(raw.Build || "")),
   };
 }
 
 // ===============================
-// Parse CSV Text
+// Parse CSV Text (legacy)
 // ===============================
 export function parseCsvText(text: string): EnhancedPlayer[] {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
