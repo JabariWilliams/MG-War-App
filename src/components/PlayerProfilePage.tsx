@@ -19,19 +19,23 @@ export default function PlayerProfilePage({
   onBack
 }: Props) {
 
-  const warsPlayerWasIn = useMemo(() => {
-    return allWars.filter((war) => {
-      const list = allPlayersByWar[war];
-      if (!list) return false;
+const warsPlayerWasIn = useMemo(() => {
+  return Object.keys(allPlayersByWar).filter((war) => {
+    const list = allPlayersByWar[war];
+    if (!list) return false;
 
-      return list.some(
-        (p) => p.Player.trim().toLowerCase() === player.Player.toLowerCase()
-      );
-    });
-  }, [allWars, allPlayersByWar, player.Player]);
+    return list.some(
+      (p) => p.Player.trim().toLowerCase() === player.Player.toLowerCase()
+    );
+  });
+}, [allPlayersByWar, player.Player]);
+
 
   const lifetime = useMemo(() => {
-    const relevantWars = warsPlayerWasIn.map((w) => allPlayersByWar[w]).flat();
+    const relevantWars = warsPlayerWasIn
+  .map((w) => allPlayersByWar[w] || [])
+  .flat();
+
 
     const matches = relevantWars.filter(
       (p) => p.Player.trim().toLowerCase() === player.Player.toLowerCase()
