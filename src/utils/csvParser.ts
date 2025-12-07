@@ -15,9 +15,6 @@ export type Build =
   | "TANK"
   | "UNKNOWN";
 
-// ===============================
-// Build Detection Logic
-// ===============================
 export function detectBuild(raw: string | undefined): Build {
   if (!raw) return "UNKNOWN";
   const s = raw.toLowerCase();
@@ -56,11 +53,12 @@ export interface EnhancedPlayer {
   Attacker: string;
   buildType: Build;
   Result: string;
+  Full: string;            // << NEW FIELD
 }
 
-/************************************************************
- * NORMALIZE A SINGLE CSV ROW
- ************************************************************/
+// ===============================
+// Normalize CSV Row
+// ===============================
 export function normalizeCSVRow(raw: any): EnhancedPlayer | null {
   if (!raw.Player) return null;
 
@@ -85,18 +83,19 @@ export function normalizeCSVRow(raw: any): EnhancedPlayer | null {
     Defender: raw.Defender ? String(raw.Defender).trim() : "",
     Attacker: raw.Attacker ? String(raw.Attacker).trim() : "",
     Result: raw.Result ? String(raw.Result).trim() : "",
+    Full: raw.Full ? String(raw.Full).trim().toLowerCase() : "yes", // default yes
     buildType: detectBuild(String(raw.Build || "")),
   };
 }
 
-/************************************************************
- * PARSE FULL CSV TEXT
- ************************************************************/
+// ===============================
+// Parse CSV Text
+// ===============================
 export function parseCsvText(text: string): EnhancedPlayer[] {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
   const delimiter = text.includes("\t") ? "\t" : ",";
-  const header = lines.shift()!.split(delimiter).map((h) => h.trim());
 
+  const header = lines.shift()!.split(delimiter).map((h) => h.trim());
 
   const players: EnhancedPlayer[] = [];
 
@@ -113,9 +112,9 @@ export function parseCsvText(text: string): EnhancedPlayer[] {
   return players;
 }
 
-/************************************************************
- * GROUP PLAYERS BY GROUP #
- ************************************************************/
+// ===============================
+// Group helper
+// ===============================
 export function groupByGroup(players: EnhancedPlayer[]): EnhancedPlayer[][] {
   const map: Record<number, EnhancedPlayer[]> = {};
 
