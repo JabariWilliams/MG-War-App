@@ -162,7 +162,7 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
       </div>
 	  <div className="flex justify-end pr-2">
   <p className="text-xs text-nw-parchment-soft opacity-60 italic">
-    * Wars under the cutoff time are excluded from averages
+    * Legacy stats and Wars under the cutoff time are excluded from averages due to compatibility
   </p>
 </div>
     </section>
