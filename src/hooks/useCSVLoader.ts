@@ -10,7 +10,6 @@ export default function useCSVLoader() {
   const [csvFiles, setCsvFiles] = useState<string[]>([]);
   const [selectedCSV, setSelectedCSV] = useState("__none__");
 
-  // store all wars
   const [allPlayersByWar, setAllPlayersByWar] =
     useState<Record<string, EnhancedPlayer[]>>({});
 
@@ -41,8 +40,8 @@ export default function useCSVLoader() {
   };
 
   // ----------------------------------------------------
-  // Load ALL wars (ONCE)
-  // now supports Full=yes/no logic
+  // Load ALL wars (once)
+  // with SAFE Full=yes/no filtering
   // ----------------------------------------------------
   const loadAllWars = async () => {
     const out: Record<string, EnhancedPlayer[]> = {};
@@ -55,18 +54,17 @@ export default function useCSVLoader() {
         .map((r) => normalizeCSVRow(r))
         .filter(Boolean) as EnhancedPlayer[];
 
-      // ----------------------------------------------------
-      // 🚨 NEW: remove wars where ALL players have Full = "no"
-      // ----------------------------------------------------
-      const hasAnyFullYes = parsed.some((p) => p.Full !== "no");
+      // ----- New logic -----
+      // A war should be removed ONLY if:
+      // EVERY row is truly "no"
+      const hasAtLeastOneFullYes = parsed.some((p) => p.Full === "yes");
 
-      if (!hasAnyFullYes) {
-        // skip this war entirely
+      if (!hasAtLeastOneFullYes) {
+        // drop the war — but ONLY if it is fully marked "no"
         continue;
       }
 
-      // Optional: only keep players marked Full=yes
-      // (you did NOT request this, so we keep all rows)
+      // keep entire war
       out[file] = parsed;
     }
 
@@ -77,7 +75,6 @@ export default function useCSVLoader() {
     if (csvFiles.length > 0) loadAllWars();
   }, [csvFiles]);
 
-  // load list of CSV files
   useEffect(() => {
     fetch("/csv-manifest.json")
       .then((res) => res.json())

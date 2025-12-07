@@ -53,7 +53,7 @@ export interface EnhancedPlayer {
   Attacker: string;
   buildType: Build;
   Result: string;
-  Full: string;            // << NEW FIELD
+  Full: string; // <-- normalized yes/no
 }
 
 // ===============================
@@ -64,6 +64,14 @@ export function normalizeCSVRow(raw: any): EnhancedPlayer | null {
 
   const num = (v: any) =>
     Number(String(v || "0").replace(/,/g, "").replace("%", "")) || 0;
+
+  // ----- Normalized Full flag -----
+  const rawFull = raw.Full ? String(raw.Full).trim().toLowerCase() : "";
+
+  const fullNormalized =
+    rawFull === "no" || rawFull === "n" || rawFull === "false"
+      ? "no"
+      : "yes";
 
   const kills = num(raw.Kills);
   const deaths = num(raw.Deaths);
@@ -83,7 +91,7 @@ export function normalizeCSVRow(raw: any): EnhancedPlayer | null {
     Defender: raw.Defender ? String(raw.Defender).trim() : "",
     Attacker: raw.Attacker ? String(raw.Attacker).trim() : "",
     Result: raw.Result ? String(raw.Result).trim() : "",
-    Full: raw.Full ? String(raw.Full).trim().toLowerCase() : "yes", // default yes
+    Full: fullNormalized,
     buildType: detectBuild(String(raw.Build || "")),
   };
 }
