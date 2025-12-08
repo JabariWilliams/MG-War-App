@@ -23,16 +23,32 @@ type GroupStat = {
   totalContrib: number; // kills + assists
 };
 
+// ======================================================================
+// BUILD GROUP STATS
+// - Filters OUT QDPS builds
+// - Filters OUT players who are NOT marked Full = "yes"
+// ======================================================================
 function buildGroupStats(players: EnhancedPlayer[]): GroupStat[] {
   const map = new Map<string, GroupStat>();
 
-  for (const p of players) {
-    const groupKey = (p as any).Group ?? "Unassigned";
+  // 1) Filter to full wars only
+  const fullOnly = players.filter((p) => {
+    const isFull = String(p.Full || "").trim().toLowerCase() === "yes";
+    return isFull;
+  });
 
-    const dmg = Number((p as any).Damage || 0);
-    const heal = Number((p as any).Healing || 0);
-    const kills = Number((p as any).Kills || 0);
-    const assists = Number((p as any).Assists || 0);
+  // 2) Remove QDPS from group comparison entirely
+  const filtered = fullOnly.filter(
+    (p) => p.buildType.trim().toUpperCase() !== "QDPS"
+  );
+
+  for (const p of filtered) {
+    const groupKey = p.Group?.toString() ?? "Unassigned";
+
+    const dmg = Number(p.Damage || 0);
+    const heal = Number(p.Healing || 0);
+    const kills = Number(p.Kills || 0);
+    const assists = Number(p.Assists || 0);
     const contrib = kills + assists;
 
     if (!map.has(groupKey)) {
@@ -45,15 +61,17 @@ function buildGroupStats(players: EnhancedPlayer[]): GroupStat[] {
     }
 
     const stat = map.get(groupKey)!;
-    stat.totalDamage += isNaN(dmg) ? 0 : dmg;
-    stat.totalHealing += isNaN(heal) ? 0 : heal;
-    stat.totalContrib += isNaN(contrib) ? 0 : contrib;
+    stat.totalDamage += dmg;
+    stat.totalHealing += heal;
+    stat.totalContrib += contrib;
   }
 
   return Array.from(map.values()).sort((a, b) => b.totalDamage - a.totalDamage);
 }
 
-export default function GroupComparisonPage({ players }: GroupComparisonPageProps) {
+export default function GroupComparisonPage({
+  players,
+}: GroupComparisonPageProps) {
   const groupStats = useMemo(() => buildGroupStats(players), [players]);
 
   if (!groupStats.length) {
@@ -61,7 +79,7 @@ export default function GroupComparisonPage({ players }: GroupComparisonPageProp
       <section className="nw-panel p-4 rounded-xl bg-black/40 border border-nw-gold-soft/20">
         <h2 className="nw-title text-nw-gold-soft text-lg mb-2">Group Comparison</h2>
         <p className="text-sm text-nw-parchment-soft/80">
-          No group data available for this war.
+          No valid full-war group data available.
         </p>
       </section>
     );
@@ -69,12 +87,10 @@ export default function GroupComparisonPage({ players }: GroupComparisonPageProp
 
   return (
     <section className="pt-1">
-
       <p className="text-sm text-nw-parchment-soft/80 mb-6">
-        Comparing total damage, healing, and contribution (kills + assists) for all groups
-        in this war.
+        Comparing **full-war only** damage, healing, and contribution (kills + assists)
+        for groups. QDPS players excluded.
       </p>
-
 
       {/* Leaderboard Table */}
       <div className="nw-subpanel p-4 rounded-xl bg-black/40 border border-nw-gold-soft/20 overflow-x-auto">

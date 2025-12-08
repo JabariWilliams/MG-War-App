@@ -58,10 +58,22 @@ export default function ClassComparison({ players }: ClassComparisonProps) {
     KP: [Math.min(...kp), Math.max(...kp)],
   };
 
+  // ==========================================================
+  // NORMAL HEAT SCALE (green = high, red = low)
+  // ==========================================================
   const heat = (v: number, [min, max]: [number, number]) => {
     if (min === max) return "hsl(0, 0%, 20%)";
     const pct = (v - min) / (max - min);
-    return `hsl(${pct * 120}, 40%, 28%)`;
+    return `hsl(${pct * 120}, 40%, 28%)`; // green → red
+  };
+
+  // ==========================================================
+  // REVERSED HEAT SCALE FOR DEATHS (green = low, red = high) 🔥 UPDATED
+  // ==========================================================
+  const heatReversed = (v: number, [min, max]: [number, number]) => {
+    if (min === max) return "hsl(0, 0%, 20%)";
+    const pct = 1 - (v - min) / (max - min); // reverse pct
+    return `hsl(${pct * 120}, 40%, 28%)`; // red → green
   };
 
   const totals = {
@@ -119,21 +131,30 @@ export default function ClassComparison({ players }: ClassComparisonProps) {
             {filtered.map((p, i) => (
               <tr key={i} className="border-t border-nw-gold/10">
                 <td className="px-3 py-2">{p.Player}</td>
+
+                {/* NORMAL HEAT */}
                 <td className="px-3 py-2" style={{ backgroundColor: heat(p.Kills, colMinMax.Kills) }}>
                   {p.Kills}
                 </td>
-                <td className="px-3 py-2" style={{ backgroundColor: heat(p.Deaths, colMinMax.Deaths) }}>
+
+                {/* REVERSED DEATH HEAT 🔥 UPDATED */}
+                <td className="px-3 py-2" style={{ backgroundColor: heatReversed(p.Deaths, colMinMax.Deaths) }}>
                   {p.Deaths}
                 </td>
+
+                {/* NORMAL HEAT */}
                 <td className="px-3 py-2" style={{ backgroundColor: heat(p.Assists, colMinMax.Assists) }}>
                   {p.Assists}
                 </td>
+
                 <td className="px-3 py-2" style={{ backgroundColor: heat(p.Damage, colMinMax.Damage) }}>
                   {p.Damage.toLocaleString()}
                 </td>
+
                 <td className="px-3 py-2" style={{ backgroundColor: heat(p.Healing, colMinMax.Healing) }}>
                   {p.Healing.toLocaleString()}
                 </td>
+
                 <td className="px-3 py-2" style={{ backgroundColor: heat(p.KP, colMinMax.KP) }}>
                   {p.KP.toFixed(1)}%
                 </td>
