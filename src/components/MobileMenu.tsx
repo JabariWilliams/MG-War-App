@@ -37,17 +37,25 @@ export default function MobileMenu({
 
       {/* SLIDE PANEL */}
       <div
-        className={`fixed top-0 left-0 h-full w-64 bg-black/80 border-r border-nw-gold/40 z-50 p-4 overflow-y-auto transform transition-transform duration-300 ${
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-        style={{ paddingTop: "70px" }}
+        className={`
+          fixed top-0 left-0 
+          h-full w-64 
+          bg-black/80 
+          border-r border-nw-gold/40 
+          z-50 
+          p-4 
+          overflow-y-auto 
+          transform transition-transform duration-300
+          ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
+        `}
+        style={{ paddingTop: "80px" }} // 🔥 FIX: ensures menu content is below header
       >
         {/* LOGO */}
         <div className="flex flex-col items-center mb-6 mt-2">
           <img
             src="/assets/mercguards-logo.png"
             alt="Mercguards Logo"
-            className="w-24 opacity-90 drop-shadow-lg"
+            className="w-20 opacity-90 drop-shadow-lg"
           />
           <p className="mt-2 text-nw-gold-soft font-semibold text-sm tracking-wide">
             MERCGUARDS
@@ -110,7 +118,7 @@ export default function MobileMenu({
             War Reports
           </div>
 
-          {/* ---- Legacy Stats (NEW) ---- */}
+          {/* Legacy Stats */}
           <button
             onClick={() => {
               setView("legacy");
@@ -123,10 +131,10 @@ export default function MobileMenu({
                 : "text-nw-parchment-soft"
             }`}
           >
-             Legacy Stats
+            Legacy Stats
           </button>
 
-          {/* CSV list */}
+          {/* CSV LIST */}
           {csvFiles.map((file) => (
             <button
               key={file}

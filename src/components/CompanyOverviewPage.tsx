@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { motion } from "framer-motion";
 import { EnhancedPlayer } from "../utils/csvParser";
 
 interface Props {
@@ -6,27 +7,20 @@ interface Props {
 }
 
 export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
-
   const summary = useMemo(() => {
     if (!allPlayersByWar) return null;
 
     const warKeys = Object.keys(allPlayersByWar);
     if (warKeys.length === 0) return null;
 
-    // ----------------------------------------------------
-    // VALID WARS (Any non-empty array)
-    // ----------------------------------------------------
     const validWars = warKeys.filter((w) => Array.isArray(allPlayersByWar[w]));
     if (validWars.length === 0) return null;
 
-    // ----------------------------------------------------
-    // REAL WAR COUNT (all CSV wars)
-    // ----------------------------------------------------
     const realWarCount = validWars.length;
 
-    // ----------------------------------------------------
-    // WIN / LOSS — ALL WARS INCLUDED
-    // ----------------------------------------------------
+    // -----------------------------
+    // WIN / LOSS ACROSS ALL WARS
+    // -----------------------------
     let winsReal = 0;
     let lossesReal = 0;
 
@@ -44,9 +38,9 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
       else if (result.includes("loss")) lossesReal++;
     }
 
-    // ----------------------------------------------------
+    // -----------------------------
     // LEGACY STATIC VALUES
-    // ----------------------------------------------------
+    // -----------------------------
     const legacyWins = 1;
     const legacyLosses = 3;
     const legacyWars = 4;
@@ -55,10 +49,9 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
     const totalLosses = lossesReal + legacyLosses;
     const warsCounted = realWarCount + legacyWars;
 
-    // ----------------------------------------------------------
-    // FULL WARS FOR AVERAGES ONLY
-    // A war counts as FULL ONLY IF EVERY row has Full === "yes"
-    // ----------------------------------------------------------
+    // -----------------------------
+    // FULL WARS ONLY FOR AVERAGES
+    // -----------------------------
     const fullWarKeys = validWars.filter((war) => {
       const rows = allPlayersByWar[war];
       return rows.length > 0 && rows.every((p) => p.Full === "yes");
@@ -77,27 +70,18 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
       };
     }
 
-    // Flatten only FULL=yes wars
     const fullRows = fullWarKeys.flatMap((w) => allPlayersByWar[w]);
 
-    // ----------------------------------------------------
-    // TOTALS FOR FULL WARS ONLY (NOT ALL WARS)
-    // ----------------------------------------------------
     const totalKills = fullRows.reduce((a, p) => a + (p.Kills || 0), 0);
     const totalDeaths = fullRows.reduce((a, p) => a + (p.Deaths || 0), 0);
     const totalDamage = fullRows.reduce((a, p) => a + (p.Damage || 0), 0);
     const totalHealing = fullRows.reduce((a, p) => a + (p.Healing || 0), 0);
     const totalKP = fullRows.reduce((a, p) => a + (p.KP || 0), 0);
 
-    // ----------------------------------------------------
-    // AVERAGES DIVIDE BY FULL WAR COUNT ONLY
-    // ----------------------------------------------------
-    const fullWarCount = fullWarKeys.length;
-
-    const avgKills = totalKills / fullWarCount;
-    const avgDeaths = totalDeaths / fullWarCount;
-    const avgDamage = totalDamage / fullWarCount;
-    const avgHealing = totalHealing / fullWarCount;
+    const avgKills = totalKills / fullWarKeys.length;
+    const avgDeaths = totalDeaths / fullWarKeys.length;
+    const avgDamage = totalDamage / fullWarKeys.length;
+    const avgHealing = totalHealing / fullWarKeys.length;
     const avgKP = totalKP / fullRows.length;
 
     return {
@@ -110,7 +94,6 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
       avgHealing,
       avgKP,
     };
-
   }, [allPlayersByWar]);
 
   if (!summary) {
@@ -122,27 +105,45 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
   }
 
   return (
-    <section className="nw-panel p-6 space-y-8">
+    <section className="nw-panel p-6 space-y-10 w-full">
 
-      {/* LOGO */}
-      <div className="flex justify-center mb-2">
-        <img
+      {/* ======================================================
+            ANIMATED LOGO + TITLES
+      ====================================================== */}
+      <div className="flex flex-col items-center justify-center">
+
+        <motion.img
           src="/assets/mercguards-logo.png"
           alt="Mercguards Crest"
-          className="w-24 h-24 md:w-32 md:h-32 object-cover"
+          className="w-24 h-24 md:w-32 md:h-32 object-cover drop-shadow-[0_0_12px_rgba(255,215,128,0.35)]"
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
         />
-      </div>
 
-      {/* HEADERS */}
-      <div className="text-center space-y-1">
-        <h1 className="nw-title text-nw-gold-soft text-4xl">MERCGUARDS</h1>
-        <h2 className="nw-title text-nw-gold-soft text-xl opacity-90">
+        <motion.h1
+          className="nw-title text-nw-gold-soft text-4xl mt-4 text-center"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
+        >
+          MERCGUARDS
+        </motion.h1>
+
+        <motion.h2
+          className="nw-title text-nw-gold-soft text-xl opacity-90 text-center"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+        >
           New World Season 10 Company Overview
-        </h2>
+        </motion.h2>
       </div>
 
-      {/* COMPANY STATS */}
-      <div className="w-full flex justify-center flex-nowrap gap-6 overflow-x-auto pb-3">
+      {/* ======================================================
+            COMPANY LIFETIME STATS
+      ====================================================== */}
+      <div className="w-full flex justify-center flex-nowrap gap-4 md:gap-6 overflow-x-auto pb-3 px-1 md:px-4">
 
         <Stat label="Wars Counted" value={summary.wars} />
         <Stat label="Wins" value={summary.wins} />
@@ -160,11 +161,16 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
         />
         <Stat label="Avg KP%" value={summary.avgKP.toFixed(1) + "%"} />
       </div>
-	  <div className="flex justify-end pr-2">
-  <p className="text-xs text-nw-parchment-soft opacity-60 italic">
-    * Legacy stats and Wars under the cutoff time are excluded from averages due to compatibility
-  </p>
-</div>
+
+      {/* ======================================================
+            FOOTNOTE
+      ====================================================== */}
+      <div className="flex justify-end pr-2">
+        <p className="text-xs text-nw-parchment-soft opacity-60 italic">
+          * Legacy stats and short wars are excluded from averages for consistency.
+        </p>
+      </div>
+
     </section>
   );
 }
@@ -172,7 +178,7 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
 function Stat({ label, value }: { label: string; value: any }) {
   return (
     <div className="p-3 bg-black/20 rounded text-center min-w-[110px]">
-      <p className="text-nw-parchment-soft text-sm">{label}</p>
+      <p className="text-nw-parchment-soft text-sm whitespace-nowrap">{label}</p>
       <p className="text-xl">{value}</p>
     </div>
   );
