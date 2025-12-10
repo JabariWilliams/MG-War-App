@@ -18,23 +18,20 @@ export default function TopDeathsTable({ players }: Props) {
   const max = Math.max(...rows.map((r) => r.Deaths));
   const min = Math.min(...rows.map((r) => r.Deaths));
 
-  // Does YoNature have the MOST deaths?
-  const yonatureIsTop =
-    rows.length > 0 &&
-    rows[0].Player.trim().toLowerCase() === "yonature";
+const heat = (value: number) => {
+  if (min === max) return "hsl(0, 0%, 20%)";
 
-  const heat = (value: number) => {
-    if (min === max) return "hsl(0, 0%, 20%)";
+  const pct = (value - min) / (max - min);
+  const inverted = 1 - pct;
 
-    const pct = (value - min) / (max - min);
-    const inverted = 1 - pct;
+  const hue = 95 * inverted;        // match DPS scale, eliminates lime
+  const sat = 40;
+  const light = 24 + inverted * 16; // same brightness scale
 
-    const hue = 95 * inverted;
-    const sat = 40;
-    const light = 24 + inverted * 16;
+  return `hsl(${hue}, ${sat}%, ${light}%)`;
+};
 
-    return `hsl(${hue}, ${sat}%, ${light}%)`;
-  };
+
 
   return (
     <section className="nw-panel p-5 rounded-xl shadow-nw h-full">
@@ -53,14 +50,7 @@ export default function TopDeathsTable({ players }: Props) {
 
           <tbody>
             {rows.map((r, i) => {
-              const isYoNature =
-                r.Player.trim().toLowerCase() === "yonature";
-
-              // If YoNature has the MOST deaths → force row green
-              const overrideColor =
-                yonatureIsTop && isYoNature ? "#1f5f2a" : null;
-
-              const bgColor = overrideColor || heat(r.Deaths);
+              const color = heat(r.Deaths);
 
               return (
                 <tr
@@ -68,21 +58,15 @@ export default function TopDeathsTable({ players }: Props) {
                   className="border-b border-nw-gold/10 last:border-b-0"
                 >
                   <td
-                    className="px-3 py-2 ps-4 font-semibold"
-                    style={{
-                      backgroundColor: bgColor,
-                      color: overrideColor ? "#b6ffbf" : "inherit",
-                    }}
+                    className="px-3 py-2 ps-4"
+                    style={{ backgroundColor: color }}
                   >
                     {r.Player}
                   </td>
 
                   <td
-                    className="px-3 py-2 font-bold"
-                    style={{
-                      backgroundColor: bgColor,
-                      color: overrideColor ? "#b6ffbf" : "inherit",
-                    }}
+                    className="px-3 py-2 font-semibold"
+                    style={{ backgroundColor: color }}
                   >
                     {r.Deaths}
                   </td>
