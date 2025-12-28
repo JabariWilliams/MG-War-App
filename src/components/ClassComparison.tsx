@@ -2,6 +2,7 @@ import React, { useState } from "react";
 
 interface Player {
   Player: string;
+  Group: number;          // ✅ ADDED
   Kills: number;
   Deaths: number;
   Assists: number;
@@ -58,22 +59,18 @@ export default function ClassComparison({ players }: ClassComparisonProps) {
     KP: [Math.min(...kp), Math.max(...kp)],
   };
 
-  // ==========================================================
-  // NORMAL HEAT SCALE (green = high, red = low)
-  // ==========================================================
+  // Normal heat (green = high)
   const heat = (v: number, [min, max]: [number, number]) => {
     if (min === max) return "hsl(0, 0%, 20%)";
     const pct = (v - min) / (max - min);
-    return `hsl(${pct * 120}, 40%, 28%)`; // green → red
+    return `hsl(${pct * 120}, 40%, 28%)`;
   };
 
-  // ==========================================================
-  // REVERSED HEAT SCALE FOR DEATHS (green = low, red = high) 🔥 UPDATED
-  // ==========================================================
+  // Reversed heat for deaths (green = low)
   const heatReversed = (v: number, [min, max]: [number, number]) => {
     if (min === max) return "hsl(0, 0%, 20%)";
-    const pct = 1 - (v - min) / (max - min); // reverse pct
-    return `hsl(${pct * 120}, 40%, 28%)`; // red → green
+    const pct = 1 - (v - min) / (max - min);
+    return `hsl(${pct * 120}, 40%, 28%)`;
   };
 
   const totals = {
@@ -101,11 +98,7 @@ export default function ClassComparison({ players }: ClassComparisonProps) {
           className="px-3 py-2 text-sm rounded border border-nw-gold/60 bg-[#2a2620] text-nw-parchment-soft/90"
         >
           {classOptions.map((cls) => (
-            <option
-              key={cls}
-              value={cls}
-              className="bg-[#1a1815] text-nw-parchment-soft"
-            >
+            <option key={cls} value={cls}>
               {cls}
             </option>
           ))}
@@ -118,6 +111,7 @@ export default function ClassComparison({ players }: ClassComparisonProps) {
           <thead className="bg-black/40">
             <tr>
               <th className="px-3 py-2 text-left">Name</th>
+              <th className="px-3 py-2 text-left">Group</th> {/* ✅ ADDED */}
               <th className="px-3 py-2 text-left">Kills</th>
               <th className="px-3 py-2 text-left">Deaths</th>
               <th className="px-3 py-2 text-left">Assists</th>
@@ -131,18 +125,16 @@ export default function ClassComparison({ players }: ClassComparisonProps) {
             {filtered.map((p, i) => (
               <tr key={i} className="border-t border-nw-gold/10">
                 <td className="px-3 py-2">{p.Player}</td>
+                <td className="px-3 py-2">{p.Group}</td> {/* ✅ ADDED */}
 
-                {/* NORMAL HEAT */}
                 <td className="px-3 py-2" style={{ backgroundColor: heat(p.Kills, colMinMax.Kills) }}>
                   {p.Kills}
                 </td>
 
-                {/* REVERSED DEATH HEAT 🔥 UPDATED */}
                 <td className="px-3 py-2" style={{ backgroundColor: heatReversed(p.Deaths, colMinMax.Deaths) }}>
                   {p.Deaths}
                 </td>
 
-                {/* NORMAL HEAT */}
                 <td className="px-3 py-2" style={{ backgroundColor: heat(p.Assists, colMinMax.Assists) }}>
                   {p.Assists}
                 </td>
@@ -165,6 +157,7 @@ export default function ClassComparison({ players }: ClassComparisonProps) {
           <tfoot>
             <tr className="border-t border-nw-gold/20 bg-black/40 font-bold">
               <td className="px-3 py-2">TOTAL</td>
+              <td className="px-3 py-2">—</td> {/* Group N/A */}
               <td className="px-3 py-2">{totals.Kills}</td>
               <td className="px-3 py-2">{totals.Deaths}</td>
               <td className="px-3 py-2">{totals.Assists}</td>
