@@ -1,19 +1,30 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { EnhancedPlayer } from "../utils/csvParser";
 
 interface WarLedgerTableProps {
   players: EnhancedPlayer[];
+  enemyPlayers?: EnhancedPlayer[];
   buildColors: Record<string, string>;
   onPlayerClick: (player: EnhancedPlayer) => void;
 }
 
 export default function WarLedgerTable({
   players,
+  enemyPlayers,
   buildColors,
   onPlayerClick,
 }: WarLedgerTableProps) {
   if (!players || players.length === 0) return null;
+
+  const [showEnemy, setShowEnemy] = useState(false);
+
+  const hasEnemy = Array.isArray(enemyPlayers) && enemyPlayers.length > 0;
+
+  const displayPlayers = useMemo(() => {
+    if (showEnemy && hasEnemy) return enemyPlayers as EnhancedPlayer[];
+    return players;
+  }, [players, enemyPlayers, showEnemy, hasEnemy]);
 
   return (
     <motion.section
@@ -22,14 +33,28 @@ export default function WarLedgerTable({
       transition={{ duration: 0.4 }}
       className="nw-panel p-4"
     >
-      <h2 className="nw-title text-nw-gold-soft text-lg mb-3">Ranking</h2>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="nw-title text-nw-gold-soft text-lg">
+          {showEnemy && hasEnemy ? "Enemy Ranking" : "Ranking"}
+        </h2>
+
+        {hasEnemy && (
+          <button
+            type="button"
+            onClick={() => setShowEnemy((v) => !v)}
+            className="px-3 py-1.5 rounded-md text-xs md:text-sm border border-nw-gold-soft/30 text-nw-gold-soft hover:bg-white/5 transition"
+          >
+            {showEnemy ? "Show Allies" : "Show Enemy"}
+          </button>
+        )}
+      </div>
       <p className="text-sm text-nw-parchment-soft/80 mb-2">Click a player to open their profile</p>
 
       {/* ============================================================
           📱 MOBILE CARDS (visible < md)
       ============================================================ */}
       <div className="md:hidden space-y-3">
-        {players.map((p) => (
+        {displayPlayers.map((p) => (
           <div
             key={p.Player}
             onClick={() => onPlayerClick(p)}
@@ -88,7 +113,7 @@ export default function WarLedgerTable({
           </thead>
 
           <tbody>
-            {players.map((p, i) => (
+            {displayPlayers.map((p, i) => (
               <tr
                 key={i}
                 className="border-t border-nw-gold/10 hover:bg-white/5 cursor-pointer"

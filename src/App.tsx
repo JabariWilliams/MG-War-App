@@ -50,6 +50,7 @@ export default function App() {
   // ⭐ Corrected destructuring – includes fullWarsByWar
   const {
     players,
+    enemyPlayers,
     loadingCSV,
     csvFiles,
     selectedCSV,
@@ -176,6 +177,7 @@ export default function App() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <WarLedgerTable
                   players={players}
+                  enemyPlayers={enemyPlayers}
                   buildColors={buildColors}
                   onPlayerClick={(player) => {
                     setSelectedPlayer(player);
@@ -187,6 +189,7 @@ export default function App() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <ArmyGroupsPanel
                   players={players}
+                  enemyPlayers={enemyPlayers}
                   buildColors={buildColors}
                   BUILD_PRIORITY={BUILD_PRIORITY}
                 />

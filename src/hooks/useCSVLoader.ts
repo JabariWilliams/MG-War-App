@@ -3,11 +3,13 @@ import Papa from "papaparse";
 import {
   EnhancedPlayer,
   normalizeCSVRow,
+  normalizeEnemyCSVRow,
   detectBuild,
 } from "../utils/csvParser";
 
 export default function useCSVLoader() {
   const [players, setPlayers] = useState<EnhancedPlayer[]>([]);
+  const [enemyPlayers, setEnemyPlayers] = useState<EnhancedPlayer[]>([]);
   const [loadingCSV, setLoadingCSV] = useState(false);
 
   const [csvFiles, setCsvFiles] = useState<string[]>([]);
@@ -51,11 +53,18 @@ export default function useCSVLoader() {
           buildType: detectBuild(p.Build),
         }));
 
-      setPlayers(parsed.sort((a, b) => a.Rank - b.Rank));
+      const enemyParsed: EnhancedPlayer[] = rows
+        .map((row: any) => normalizeEnemyCSVRow(row))
+        .filter(Boolean) as EnhancedPlayer[];
+
+      setEnemyPlayers(enemyParsed.sort((a, b) => a.Rank - b.Rank));
+
+            setPlayers(parsed.sort((a, b) => a.Rank - b.Rank));
       setSelectedCSV(filename);
     } catch (err) {
       console.error("CSV load failed:", err);
       setPlayers([]);
+      setEnemyPlayers([]);
     } finally {
       setLoadingCSV(false);
     }
@@ -130,6 +139,7 @@ export default function useCSVLoader() {
 
   return {
     players,
+    enemyPlayers,
     loadingCSV,
     csvFiles,
     selectedCSV,

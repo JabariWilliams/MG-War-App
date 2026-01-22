@@ -14,22 +14,34 @@ interface Player {
 
 interface ArmyGroupsPanelProps {
   players: Player[];
+  enemyPlayers?: Player[];
   buildColors: Record<string, string>;
   BUILD_PRIORITY: Record<string, number>;
 }
 
 export default function ArmyGroupsPanel({
   players,
+  enemyPlayers,
   buildColors,
   BUILD_PRIORITY,
 }: ArmyGroupsPanelProps) {
   if (!players || players.length === 0) return null;
 
-  const qdpsPlayers = players.filter((p) => p.buildType === "QDPS");
-  const nonQDPS = players.filter((p) => p.buildType !== "QDPS");
+  const [showEnemyGroups, setShowEnemyGroups] = React.useState(false);
+
+  const hasEnemy = Array.isArray(enemyPlayers) && enemyPlayers.length > 0;
+  const enemyHasGroups =
+    hasEnemy && (enemyPlayers as Player[]).some((p) => Number(p.Group) > 0);
+
+  const displayPlayers =
+    showEnemyGroups && enemyHasGroups ? (enemyPlayers as Player[]) : players;
+
+  const qdpsPlayers = displayPlayers.filter((p) => p.buildType === "QDPS");
+  const nonQDPS = displayPlayers.filter((p) => p.buildType !== "QDPS");
 
   const grouped = Object.values(
     nonQDPS.reduce((acc: any, p) => {
+      if (!p.Group) return acc;
       if (!acc[p.Group]) acc[p.Group] = [];
       acc[p.Group].push(p);
       return acc;
@@ -63,7 +75,20 @@ export default function ArmyGroupsPanel({
           transition={{ duration: 0.4 }}
           className="space-y-5 mb-10"
         >
-          <h2 className="nw-title text-nw-gold-soft text-lg">ARMY GROUPS</h2>
+          {/* HEADER ROW: title + toggle inline */}
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="nw-title text-nw-gold-soft text-lg">ARMY GROUPS</h2>
+
+            {enemyHasGroups && (
+              <button
+                type="button"
+                onClick={() => setShowEnemyGroups((v) => !v)}
+                className="px-3 py-1.5 rounded-md text-xs md:text-sm border border-nw-gold-soft/30 text-nw-gold-soft hover:bg-white/5 transition whitespace-nowrap"
+              >
+                {showEnemyGroups ? "Show Allies" : "Show Enemy"}
+              </button>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6">
             {grouped.map((g, idx) => {
@@ -198,9 +223,7 @@ export default function ArmyGroupsPanel({
               <div className="uppercase text-[10px] text-nw-parchment-soft/60">
                 Avg KP
               </div>
-              <div className="text-right">
-                {qdpsTotals.avgKP.toFixed(1)}%
-              </div>
+              <div className="text-right">{qdpsTotals.avgKP.toFixed(1)}%</div>
             </div>
 
             <hr className="border-nw-gold/20 my-3" />
@@ -231,9 +254,7 @@ export default function ArmyGroupsPanel({
                   <div className="mt-0.5 grid grid-cols-[1fr_auto_1fr] text-[11px] text-nw-parchment-soft/90">
                     <span>DMG: {p.Damage.toLocaleString()}</span>
                     <span>HEALS: {p.Healing.toLocaleString()}</span>
-                    <span className="text-right">
-                      KP: {p.KP.toFixed(1)}%
-                    </span>
+                    <span className="text-right">KP: {p.KP.toFixed(1)}%</span>
                   </div>
 
                   <hr className="mt-2 border-nw-gold/10" />

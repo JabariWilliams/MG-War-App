@@ -95,6 +95,54 @@ export function normalizeCSVRow(raw: any): EnhancedPlayer | null {
   };
 }
 
+
+// ===============================
+// Normalize ENEMY CSV Row (columns after Full)
+// PapaParse auto-renames duplicate headers with _1 suffix.
+// Expected keys: Rank_1, Player_1, Kills_1, Deaths_1, Assists_1, Healing_1, Damage_1, KP_1 (or KP %_1 / KP%_1)
+// ===============================
+export function normalizeEnemyCSVRow(raw: any): EnhancedPlayer | null {
+  const enemyPlayer =
+    raw["Player_1"] ??
+    raw["Player (Enemy)"] ??
+    raw["Enemy Player"] ??
+    null;
+
+  if (!enemyPlayer) return null;
+
+  const num = (v: any) =>
+    Number(String(v || "0").replace(/,/g, "").replace("%", "")) || 0;
+
+  const kills = num(raw["Kills_1"]);
+  const deaths = num(raw["Deaths_1"]);
+
+  // Reuse war-level fields from main row when available
+  const rawFull = raw.Full ? String(raw.Full).trim().toLowerCase() : "";
+  const fullNormalized =
+    rawFull === "no" || rawFull === "n" || rawFull === "false"
+      ? "no"
+      : "yes";
+
+  return {
+    Rank: num(raw["Rank_1"]),
+    Group: num(raw["Group_1"]),
+    Build: String(raw["Build_1"] || "").trim(),
+    Player: String(enemyPlayer || "").trim(),
+    Kills: kills,
+    Deaths: deaths,
+    Assists: num(raw["Assists_1"]),
+    Healing: num(raw["Healing_1"]),
+    Damage: num(raw["Damage_1"]),
+    KP: num(raw["KP_1"] ?? raw["KP %_1"] ?? raw["KP%_1"] ?? 0),
+    KD: (kills / Math.max(1, deaths)).toFixed(2),
+    Defender: raw.Defender ? String(raw.Defender).trim() : "",
+    Attacker: raw.Attacker ? String(raw.Attacker).trim() : "",
+    Result: raw.Result ? String(raw.Result).trim() : "",
+    Full: fullNormalized,
+    buildType: detectBuild(String(raw["Build_1"] || "")),
+  };
+}
+
 // ===============================
 // Parse CSV Text (legacy)
 // ===============================
