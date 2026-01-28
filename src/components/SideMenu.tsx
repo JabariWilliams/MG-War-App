@@ -65,15 +65,15 @@
    return (
      <aside
        className="
--        hidden md:block fixed left-0 top-0 
--        h-full w-56 
-+        hidden md:block sticky top-[70px]
-+        h-[calc(100vh-70px)] w-56
+       hidden md:block fixed left-0 top-0 
+       h-full w-56 
+       hidden md:block sticky top-[70px]
+       h-[calc(100vh-70px)] w-56
          bg-black/60 backdrop-blur-lg 
          border-r border-nw-gold/40 
          p-4 overflow-y-auto z-30
        "
--      style={{ paddingTop: "70px" }}
+      style={{ paddingTop: "70px" }}
      >
        {/* LOGO */}
        <div className="flex flex-col items-center mb-6 mt-2">
