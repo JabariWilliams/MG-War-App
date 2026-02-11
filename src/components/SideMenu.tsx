@@ -1,6 +1,8 @@
 import React from "react";
 
-interface SideMenuProps {
+interface MobileMenuProps {
+  mobileMenuOpen: boolean;
+  setMobileMenuOpen: (open: boolean) => void;
   csvFiles: string[];
   selectedCSV: string;
   setSelectedCSV: (val: string) => void;
@@ -8,10 +10,12 @@ interface SideMenuProps {
   view: "overview" | "dashboard" | "analytics" | "player" | "legacy";
   setView: (val: "overview" | "dashboard" | "analytics" | "player" | "legacy") => void;
 
-  selectedWarIsWin?: boolean; // ✅ W/L support
+  selectedWarIsWin?: boolean; // ✅ added
 }
 
-export default function SideMenu({
+export default function MobileMenu({
+  mobileMenuOpen,
+  setMobileMenuOpen,
   csvFiles,
   selectedCSV,
   setSelectedCSV,
@@ -19,7 +23,7 @@ export default function SideMenu({
   view,
   setView,
   selectedWarIsWin,
-}: SideMenuProps) {
+}: MobileMenuProps) {
   const formatCSVName = (name: string) =>
     name.replace(".csv", "").replace(/[_-]/g, " ");
 
@@ -35,73 +39,31 @@ export default function SideMenu({
     return base;
   };
 
-  const parseFileDate = (file: string): Date | null => {
-    const base = file.replace(".csv", "");
-    const m = base.match(/(?:^|[_-])(\d{1,2})-(\d{1,2})-(\d{2})(?:$|[_-])/);
-    if (!m) return null;
-
-    const month = Number(m[1]);
-    const day = Number(m[2]);
-    const yy = Number(m[3]);
-    const year = 2000 + yy;
-
-    if (!month || month < 1 || month > 12 || !day || day < 1 || day > 31) return null;
-
-    return new Date(year, month - 1, day);
-  };
-
-  const getYearMonthKey = (file: string): string | null => {
-    const d = parseFileDate(file);
-    if (!d) return null;
-    const yyyy = String(d.getFullYear());
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    return `${yyyy}-${mm}`;
-  };
-
-  const groupedByMonth = React.useMemo(() => {
-    const map = new Map<string, string[]>();
-    const ungrouped: string[] = [];
-
-    for (const file of csvFiles) {
-      const ym = getYearMonthKey(file);
-      if (!ym) {
-        ungrouped.push(file);
-        continue;
-      }
-      if (!map.has(ym)) map.set(ym, []);
-      map.get(ym)!.push(file);
-    }
-
-    const compareFiles = (a: string, b: string) => {
-      const da = parseFileDate(a);
-      const db = parseFileDate(b);
-
-      if (da && db) {
-        const diff = da.getTime() - db.getTime();
-        if (diff !== 0) return diff;
-      } else if (da && !db) {
-        return -1;
-      } else if (!da && db) {
-        return 1;
-      }
-
-      return a.localeCompare(b);
-    };
-
-    for (const [k, arr] of map.entries()) {
-      arr.sort(compareFiles);
-      map.set(k, arr);
-    }
-
-    const monthKeys = Array.from(map.keys()).sort((a, b) => a.localeCompare(b));
-    ungrouped.sort((a, b) => a.localeCompare(b));
-
-    return { map, monthKeys, ungrouped };
-  }, [csvFiles]);
-
   return (
-    <aside className="hidden md:flex fixed left-0 top-0 h-full w-56 bg-black/80 border-r border-nw-gold/40 z-30 p-4 overflow-y-auto">
-      <div className="w-full" style={{ paddingTop: "80px" }}>
+    <>
+      {/* BACKDROP */}
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-200 ${
+          mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
+
+      {/* SLIDE PANEL */}
+      <div
+        className={`
+          fixed top-0 left-0 
+          h-full w-64 
+          bg-black/80 
+          border-r border-nw-gold/40 
+          z-50 
+          p-4 
+          overflow-y-auto 
+          transform transition-transform duration-300
+          ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
+        `}
+        style={{ paddingTop: "80px" }} // 🔥 FIX: ensures menu content is below header
+      >
         {/* LOGO */}
         <div className="flex flex-col items-center mb-6 mt-2">
           <img
@@ -124,6 +86,7 @@ export default function SideMenu({
             onClick={() => {
               setView("overview");
               setSelectedCSV("__none__");
+              setMobileMenuOpen(false);
             }}
             className={`block w-full text-left px-3 py-2 rounded mb-1 ${
               view === "overview"
@@ -137,6 +100,7 @@ export default function SideMenu({
           <button
             onClick={() => {
               setView("dashboard");
+              setMobileMenuOpen(false);
             }}
             className={`block w-full text-left px-3 py-2 rounded mb-1 ${
               view === "dashboard"
@@ -150,6 +114,7 @@ export default function SideMenu({
           <button
             onClick={() => {
               setView("analytics");
+              setMobileMenuOpen(false);
             }}
             className={`block w-full text-left px-3 py-2 rounded ${
               view === "analytics"
@@ -172,6 +137,7 @@ export default function SideMenu({
             onClick={() => {
               setView("legacy");
               setSelectedCSV("__none__");
+              setMobileMenuOpen(false);
             }}
             className={`block w-full text-left px-3 py-2 rounded mb-1 ${
               view === "legacy"
@@ -182,63 +148,27 @@ export default function SideMenu({
             Legacy Stats
           </button>
 
-          {/* ✅ CSV LIST GROUPED BY MONTH */}
-          {groupedByMonth.monthKeys.map((ym) => {
-            const files = groupedByMonth.map.get(ym) || [];
-            return (
-              <div key={ym} className="mb-2">
-                <div className="text-nw-parchment-soft/70 text-xs font-semibold px-1 py-2">
-                  {ym}
-                </div>
-
-                {files.map((file) => (
-                  <button
-                    key={file}
-                    onClick={() => {
-                      setSelectedCSV(file);
-                      loadPublicCSV(file);
-                      setView("dashboard");
-                    }}
-                    className={`block w-full text-left px-3 py-2 rounded mb-1 ${
-                      selectedCSV === file
-                        ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-                        : "text-nw-parchment-soft"
-                    }`}
-                  >
-                    {formatWarTitle(file)}
-                  </button>
-                ))}
-              </div>
-            );
-          })}
-
-          {groupedByMonth.ungrouped.length > 0 && (
-            <div className="mt-3">
-              <div className="text-nw-parchment-soft/70 text-xs font-semibold px-1 py-2">
-                Other
-              </div>
-
-              {groupedByMonth.ungrouped.map((file) => (
-                <button
-                  key={file}
-                  onClick={() => {
-                    setSelectedCSV(file);
-                    loadPublicCSV(file);
-                    setView("dashboard");
-                  }}
-                  className={`block w-full text-left px-3 py-2 rounded mb-1 ${
-                    selectedCSV === file
-                      ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-                      : "text-nw-parchment-soft"
-                  }`}
-                >
-                  {formatWarTitle(file)}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* CSV LIST */}
+          {csvFiles.map((file) => (
+            <button
+              key={file}
+              onClick={() => {
+                setSelectedCSV(file);
+                loadPublicCSV(file);
+                setView("dashboard");
+                setMobileMenuOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+                selectedCSV === file
+                  ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                  : "text-nw-parchment-soft"
+              }`}
+            >
+              {formatWarTitle(file)}
+            </button>
+          ))}
         </div>
       </div>
-    </aside>
+    </>
   );
 }
