@@ -1,185 +1,255 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { motion } from "framer-motion";
-import { EnhancedPlayer } from "../utils/csvParser";
 
-interface Props {
-  allPlayersByWar: Record<string, EnhancedPlayer[]>;
+interface MobileMenuProps {
+  mobileMenuOpen: boolean;
+  setMobileMenuOpen: (open: boolean) => void;
+  csvFiles: string[];
+  selectedCSV: string;
+  setSelectedCSV: (val: string) => void;
+  loadPublicCSV: (file: string) => void;
+  view: "overview" | "dashboard" | "analytics" | "player" | "legacy";
+  setView: (val: "overview" | "dashboard" | "analytics" | "player" | "legacy") => void;
 }
 
-export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
-  const summary = useMemo(() => {
-    if (!allPlayersByWar) return null;
+type WarOutcome = "W" | "L" | "?";
 
-    const warKeys = Object.keys(allPlayersByWar);
-    if (warKeys.length === 0) return null;
+export default function MobileMenu({
+  mobileMenuOpen,
+  setMobileMenuOpen,
+  csvFiles,
+  selectedCSV,
+  setSelectedCSV,
+  loadPublicCSV,
+  view,
+  setView,
+}: MobileMenuProps) {
+  const formatCSVName = (name: string) =>
+    name.replace(".csv", "").replace(/[_-]/g, " ");
 
-    const validWars = warKeys.filter((w) => Array.isArray(allPlayersByWar[w]));
-    if (validWars.length === 0) return null;
+  // ✅ CHANGE THIS if your CSVs live under a folder like "/wars/"
+  const CSV_BASE_PATH = "/";
 
-    const realWarCount = validWars.length;
+  const [warOutcomeByFile, setWarOutcomeByFile] = React.useState<Record<string, WarOutcome>>({});
 
-    // -----------------------------
-    // WIN / LOSS ACROSS ALL WARS
-    // -----------------------------
-    let winsReal = 0;
-    let lossesReal = 0;
+  const getCSVUrl = (file: string) => {
+    const base = CSV_BASE_PATH.endsWith("/") ? CSV_BASE_PATH : `${CSV_BASE_PATH}/`;
+    return `${base}${encodeURIComponent(file)}`;
+  };
 
-    for (const war of validWars) {
-      const entries = allPlayersByWar[war];
-      if (!entries || entries.length === 0) continue;
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/\r/g, "")
+      .replace(/"/g, "")
+      .trim();
 
-      const result =
-        (entries[0].Result || entries[0].result || "")
-          .toString()
-          .trim()
-          .toLowerCase();
+  const extractOutcomeFromCSVText = (csvText: string): WarOutcome => {
+    const text = normalize(csvText);
 
-      if (result.includes("win")) winsReal++;
-      else if (result.includes("loss")) lossesReal++;
+    // 1) Parse header, look for result/outcome column
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length >= 2) {
+      const header = lines[0].split(",").map((h) => normalize(h));
+      const resultIdx = header.findIndex((h) => h === "result" || h === "outcome");
+      if (resultIdx >= 0) {
+        const firstRow = lines[1].split(",").map((v) => normalize(v));
+        const rv = firstRow[resultIdx] || "";
+        if (rv.includes("win") || rv.includes("victory")) return "W";
+        if (rv.includes("loss") || rv.includes("defeat")) return "L";
+      }
     }
 
-    // -----------------------------
-    // LEGACY STATIC VALUES
-    // -----------------------------
-    const legacyWins = 1;
-    const legacyLosses = 3;
-    const legacyWars = 4;
+    // 2) Keyword scan fallback
+    const hasWin = /\b(win|victory|won)\b/.test(text);
+    const hasLoss = /\b(loss|defeat|lost)\b/.test(text);
 
-    const totalWins = winsReal + legacyWins;
-    const totalLosses = lossesReal + legacyLosses;
-    const warsCounted = realWarCount + legacyWars;
+    if (hasWin && !hasLoss) return "W";
+    if (hasLoss && !hasWin) return "L";
 
-    // -----------------------------
-    // FULL WARS ONLY FOR AVERAGES
-    // -----------------------------
-    const fullWarKeys = validWars.filter((war) => {
-      const rows = allPlayersByWar[war];
-      return rows.length > 0 && rows.every((p) => p.Full === "yes");
-    });
+    return "?";
+  };
 
-    if (fullWarKeys.length === 0) {
-      return {
-        wars: warsCounted,
-        wins: totalWins,
-        losses: totalLosses,
-        avgKills: 0,
-        avgDeaths: 0,
-        avgDamage: 0,
-        avgHealing: 0,
-        avgKP: 0,
-      };
-    }
+  const fetchOutcomeIfNeeded = React.useCallback(
+    async (file: string) => {
+      if (warOutcomeByFile[file]) return;
 
-    const fullRows = fullWarKeys.flatMap((w) => allPlayersByWar[w]);
+      try {
+        const url = getCSVUrl(file);
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        const outcome = extractOutcomeFromCSVText(text);
 
-    const totalKills = fullRows.reduce((a, p) => a + (p.Kills || 0), 0);
-    const totalDeaths = fullRows.reduce((a, p) => a + (p.Deaths || 0), 0);
-    const totalDamage = fullRows.reduce((a, p) => a + (p.Damage || 0), 0);
-    const totalHealing = fullRows.reduce((a, p) => a + (p.Healing || 0), 0);
-    const totalKP = fullRows.reduce((a, p) => a + (p.KP || 0), 0);
-
-    const avgKills = totalKills / fullWarKeys.length;
-    const avgDeaths = totalDeaths / fullWarKeys.length;
-    const avgDamage = totalDamage / fullWarKeys.length;
-    const avgHealing = totalHealing / fullWarKeys.length;
-    const avgKP = totalKP / fullRows.length;
-
-    return {
-      wars: warsCounted,
-      wins: totalWins,
-      losses: totalLosses,
-      avgKills,
-      avgDeaths,
-      avgDamage,
-      avgHealing,
-      avgKP,
-    };
-  }, [allPlayersByWar]);
-
-  if (!summary) {
-    return (
-      <div className="nw-panel p-6">
-        <p className="opacity-70">No war data available.</p>
-      </div>
-    );
-  }
-
-  return (
-    <section className="nw-panel p-6 space-y-10 w-full">
-
-      {/* ======================================================
-            ANIMATED LOGO + TITLES
-      ====================================================== */}
-      <div className="flex flex-col items-center justify-center">
-
-        <motion.img
-          src="/assets/mercguards-logo.png"
-          alt="Mercguards Crest"
-          className="w-24 h-24 md:w-32 md:h-32 object-cover drop-shadow-[0_0_12px_rgba(255,215,128,0.35)]"
-          initial={{ opacity: 0, scale: 0.8, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-        />
-
-        <motion.h1
-          className="nw-title text-nw-gold-soft text-4xl mt-4 text-center"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
-        >
-          MERCGUARDS
-        </motion.h1>
-
-        <motion.h2
-          className="nw-title text-nw-gold-soft text-xl opacity-90 text-center"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
-        >
-          New World Season 10 Company Overview
-        </motion.h2>
-      </div>
-
-      {/* ======================================================
-            COMPANY LIFETIME STATS
-      ====================================================== */}
-      <div className="w-full flex justify-center flex-nowrap gap-4 md:gap-6 overflow-x-auto pb-3 px-1 md:px-4">
-
-        <Stat label="Wars Counted" value={summary.wars} />
-        <Stat label="Wins" value={summary.wins} />
-        <Stat label="Losses" value={summary.losses} />
-
-        <Stat label="Avg Kills / War" value={summary.avgKills.toFixed(1)} />
-        <Stat label="Avg Deaths / War" value={summary.avgDeaths.toFixed(1)} />
-        <Stat
-          label="Avg Damage"
-          value={Math.round(summary.avgDamage).toLocaleString()}
-        />
-        <Stat
-          label="Avg Healing"
-          value={Math.round(summary.avgHealing).toLocaleString()}
-        />
-        <Stat label="Avg KP%" value={summary.avgKP.toFixed(1) + "%"} />
-      </div>
-
-      {/* ======================================================
-            FOOTNOTE
-      ====================================================== */}
-      <div className="flex justify-end pr-2">
-        <p className="text-xs text-nw-parchment-soft opacity-60 italic">
-          * Legacy stats and short wars are excluded from averages for consistency.
-        </p>
-      </div>
-
-    </section>
+        setWarOutcomeByFile((prev) => (prev[file] ? prev : { ...prev, [file]: outcome }));
+      } catch {
+        setWarOutcomeByFile((prev) => (prev[file] ? prev : { ...prev, [file]: "?" }));
+      }
+    },
+    [warOutcomeByFile]
   );
-}
 
-function Stat({ label, value }: { label: string; value: any }) {
+  // Preload outcomes (sequential)
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      for (const file of csvFiles) {
+        if (cancelled) return;
+        if (!warOutcomeByFile[file]) {
+          await fetchOutcomeIfNeeded(file);
+        }
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [csvFiles, warOutcomeByFile, fetchOutcomeIfNeeded]);
+
+  const formatWarLabelWithOutcome = (file: string) => {
+    const base = formatCSVName(file);
+    const outcome = warOutcomeByFile[file] || "?";
+    if (outcome === "W") return `W - ${base}`;
+    if (outcome === "L") return `L - ${base}`;
+    return base; // unknown: no prefix (change if you want)
+  };
+
   return (
-    <div className="p-3 bg-black/20 rounded text-center min-w-[110px]">
-      <p className="text-nw-parchment-soft text-sm whitespace-nowrap">{label}</p>
-      <p className="text-xl">{value}</p>
-    </div>
+    <>
+      {/* BACKDROP */}
+      <motion.div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 ${
+          mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        initial={false}
+        animate={{ opacity: mobileMenuOpen ? 1 : 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={() => setMobileMenuOpen(false)}
+      />
+
+      {/* SLIDE PANEL */}
+      <motion.div
+        className={`
+          fixed top-0 left-0 
+          h-full w-64 
+          bg-black/80 
+          border-r border-nw-gold/40 
+          z-50 
+          p-4 
+          overflow-y-auto
+        `}
+        style={{ paddingTop: "80px" }}
+        initial={false}
+        animate={{ x: mobileMenuOpen ? 0 : -300 }}
+        transition={{ duration: 0.3 }}
+      >
+        {/* LOGO */}
+        <div className="flex flex-col items-center mb-6 mt-2">
+          <img
+            src="/assets/mercguards-logo.png"
+            alt="Mercguards Logo"
+            className="w-20 opacity-90 drop-shadow-lg"
+          />
+          <p className="mt-2 text-nw-gold-soft font-semibold text-sm tracking-wide">
+            MERCGUARDS
+          </p>
+        </div>
+
+        {/* NAVIGATION */}
+        <div className="mb-6">
+          <div className="text-nw-gold-soft text-lg font-bold mb-3">
+            Navigation
+          </div>
+
+          <button
+            onClick={() => {
+              setView("overview");
+              setSelectedCSV("__none__");
+              setMobileMenuOpen(false);
+            }}
+            className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+              view === "overview"
+                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                : "text-nw-parchment-soft"
+            }`}
+          >
+            Overview
+          </button>
+
+          <button
+            onClick={() => {
+              setView("dashboard");
+              setMobileMenuOpen(false);
+            }}
+            className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+              view === "dashboard"
+                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                : "text-nw-parchment-soft"
+            }`}
+          >
+            Dashboard
+          </button>
+
+          <button
+            onClick={() => {
+              setView("analytics");
+              setMobileMenuOpen(false);
+            }}
+            className={`block w-full text-left px-3 py-2 rounded ${
+              view === "analytics"
+                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                : "text-nw-parchment-soft"
+            }`}
+          >
+            Analytics
+          </button>
+        </div>
+
+        {/* WAR REPORTS */}
+        <div>
+          <div className="text-nw-gold-soft text-lg font-bold mb-3">
+            War Reports
+          </div>
+
+          {/* Legacy Stats */}
+          <button
+            onClick={() => {
+              setView("legacy");
+              setSelectedCSV("__none__");
+              setMobileMenuOpen(false);
+            }}
+            className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+              view === "legacy"
+                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                : "text-nw-parchment-soft"
+            }`}
+          >
+            Legacy Stats
+          </button>
+
+          {/* CSV LIST (with W/L prefix from CSV contents) */}
+          {csvFiles.map((file) => (
+            <button
+              key={file}
+              onClick={() => {
+                setSelectedCSV(file);
+                loadPublicCSV(file);
+                setView("dashboard");
+                setMobileMenuOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-2 rounded mb-1 ${
+                selectedCSV === file
+                  ? "bg-nw-gold-soft/20 text-nw-gold-soft"
+                  : "text-nw-parchment-soft"
+              }`}
+            >
+              {formatWarLabelWithOutcome(file)}
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    </>
   );
 }

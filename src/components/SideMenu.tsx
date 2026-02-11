@@ -10,6 +10,8 @@ interface SideMenuProps {
   setView: (val: "overview" | "dashboard" | "analytics" | "player" | "legacy") => void;
 }
 
+type WarOutcome = "W" | "L" | "?";
+
 export default function SideMenu({
   csvFiles,
   selectedCSV,
@@ -18,9 +20,106 @@ export default function SideMenu({
   view,
   setView,
 }: SideMenuProps) {
-
   const formatCSVName = (name: string) =>
     name.replace(".csv", "").replace(/[_-]/g, " ");
+
+  // ✅ CHANGE THIS if your CSVs live under a folder like "/wars/"
+  const CSV_BASE_PATH = "/";
+
+  // Cache outcomes so we don't refetch repeatedly
+  const [warOutcomeByFile, setWarOutcomeByFile] = React.useState<Record<string, WarOutcome>>({});
+
+  const getCSVUrl = (file: string) => {
+    const base = CSV_BASE_PATH.endsWith("/") ? CSV_BASE_PATH : `${CSV_BASE_PATH}/`;
+    return `${base}${encodeURIComponent(file)}`;
+  };
+
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/\r/g, "")
+      .replace(/"/g, "")
+      .trim();
+
+  /**
+   * Best-effort outcome extraction:
+   * 1) If there is a "result" column in the header, read the first data row's result value.
+   * 2) Else, search the entire file for keywords: win/victory vs loss/defeat.
+   */
+  const extractOutcomeFromCSVText = (csvText: string): WarOutcome => {
+    const text = normalize(csvText);
+
+    // Try to parse header/result column
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length >= 2) {
+      const header = lines[0].split(",").map((h) => normalize(h));
+      const resultIdx = header.findIndex((h) => h === "result" || h === "outcome");
+      if (resultIdx >= 0) {
+        const firstRow = lines[1].split(",").map((v) => normalize(v));
+        const rv = firstRow[resultIdx] || "";
+        if (rv.includes("win") || rv.includes("victory")) return "W";
+        if (rv.includes("loss") || rv.includes("defeat")) return "L";
+      }
+    }
+
+    // Keyword scan fallback
+    const hasWin = /\b(win|victory|won)\b/.test(text);
+    const hasLoss = /\b(loss|defeat|lost)\b/.test(text);
+
+    if (hasWin && !hasLoss) return "W";
+    if (hasLoss && !hasWin) return "L";
+
+    // If both appear (or neither), we can't be sure
+    return "?";
+  };
+
+  // Fetch outcome for a single file (cached)
+  const fetchOutcomeIfNeeded = React.useCallback(
+    async (file: string) => {
+      if (warOutcomeByFile[file]) return; // already have it
+
+      try {
+        const url = getCSVUrl(file);
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        const outcome = extractOutcomeFromCSVText(text);
+
+        setWarOutcomeByFile((prev) => (prev[file] ? prev : { ...prev, [file]: outcome }));
+      } catch {
+        setWarOutcomeByFile((prev) => (prev[file] ? prev : { ...prev, [file]: "?" }));
+      }
+    },
+    [warOutcomeByFile]
+  );
+
+  // Light-touch preload: fetch outcomes for visible list (sequential, avoids spike)
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      for (const file of csvFiles) {
+        if (cancelled) return;
+        // Only fetch if not already cached
+        if (!warOutcomeByFile[file]) {
+          await fetchOutcomeIfNeeded(file);
+        }
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [csvFiles, warOutcomeByFile, fetchOutcomeIfNeeded]);
+
+  const formatWarLabelWithOutcome = (file: string) => {
+    const base = formatCSVName(file);
+    const outcome = warOutcomeByFile[file] || "?";
+    if (outcome === "W") return `W - ${base}`;
+    if (outcome === "L") return `L - ${base}`;
+    return base; // unknown: don't prefix (or change to `? - ${base}` if you want)
+  };
 
   // -----------------------------------------------------
   // Animated Nav Button
@@ -134,12 +233,11 @@ export default function SideMenu({
           <NavButton
             key={file}
             active={selectedCSV === file}
-            label={formatCSVName(file)}
+            label={formatWarLabelWithOutcome(file)}
             onClick={() => {
               setSelectedCSV(file);
               loadPublicCSV(file);
-              if (view === "overview" || view === "legacy")
-                setView("dashboard");
+              if (view === "overview" || view === "legacy") setView("dashboard");
             }}
           />
         ))}
