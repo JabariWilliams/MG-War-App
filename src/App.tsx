@@ -47,15 +47,9 @@ export default function App() {
     null
   );
 
-  // ✅ added: tracks whether currently loaded war is a win/loss (undefined until computed)
-  const [selectedWarIsWin, setSelectedWarIsWin] = useState<boolean | undefined>(
-    undefined
-  );
-
   // ⭐ Corrected destructuring – includes fullWarsByWar
   const {
     players,
-    enemyPlayers,
     loadingCSV,
     csvFiles,
     selectedCSV,
@@ -68,11 +62,6 @@ export default function App() {
 
   const { attackers, defenders, result } = useMatchup(players);
   const exportRef = useRef<HTMLDivElement | null>(null);
-
-  // ✅ added: reset W/L badge when war changes (until MatchupPanel recomputes)
-  useEffect(() => {
-    setSelectedWarIsWin(undefined);
-  }, [selectedCSV]);
 
   // Fix selected player when switching wars
   useEffect(() => {
@@ -119,7 +108,6 @@ export default function App() {
         loadPublicCSV={loadPublicCSV}
         view={view}
         setView={setView}
-        selectedWarIsWin={selectedWarIsWin} // ✅ added
       />
 
       <HeaderBar
@@ -174,7 +162,6 @@ export default function App() {
                   attackers={attackers}
                   defenders={defenders}
                   result={result}
-                  onResultComputed={setSelectedWarIsWin} // ✅ added
                 />
               </motion.div>
 
@@ -189,7 +176,6 @@ export default function App() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <WarLedgerTable
                   players={players}
-                  enemyPlayers={enemyPlayers}
                   buildColors={buildColors}
                   onPlayerClick={(player) => {
                     setSelectedPlayer(player);
@@ -201,7 +187,6 @@ export default function App() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <ArmyGroupsPanel
                   players={players}
-                  enemyPlayers={enemyPlayers}
                   buildColors={buildColors}
                   BUILD_PRIORITY={BUILD_PRIORITY}
                 />
@@ -219,7 +204,6 @@ export default function App() {
                   attackers={attackers}
                   defenders={defenders}
                   result={result}
-                  onResultComputed={setSelectedWarIsWin} // ✅ added
                 />
               </motion.div>
 
