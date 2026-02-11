@@ -20,9 +20,6 @@ export default function SideMenu({
   view,
   setView,
 }: SideMenuProps) {
-  const formatCSVName = (name: string) =>
-    name.replace(".csv", "").replace(/[_-]/g, " ");
-
   // ✅ CHANGE THIS if your CSVs live under a folder like "/wars/"
   const CSV_BASE_PATH = "/";
 
@@ -100,20 +97,11 @@ export default function SideMenu({
     };
   }, [csvFiles, warOutcomeByFile, fetchOutcomeIfNeeded]);
 
-  const formatWarLabelWithOutcome = (file: string) => {
-    const base = formatCSVName(file);
-    const outcome = warOutcomeByFile[file] || "?";
-    if (outcome === "W") return `W - ${base}`;
-    if (outcome === "L") return `L - ${base}`;
-    return base;
-  };
-
   // -----------------------------
   // DATE PARSING + GROUPING
   // -----------------------------
   const parseFileDate = (file: string): Date | null => {
     const base = file.replace(".csv", "");
-    // Matches _MM-DD-YY or _MM-D-YY anywhere
     const m = base.match(/(?:^|[_-])(\d{1,2})-(\d{1,2})-(\d{2})(?:$|[_-])/);
     if (!m) return null;
 
@@ -185,14 +173,67 @@ export default function SideMenu({
   const [openMonthKey, setOpenMonthKey] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    // Auto-open the month that contains the selected war (or the first month)
-    if (selectedMonthKey) {
-      setOpenMonthKey(selectedMonthKey);
-    } else if (!openMonthKey && grouped.monthKeys.length > 0) {
-      setOpenMonthKey(grouped.monthKeys[0]);
-    }
+    if (selectedMonthKey) setOpenMonthKey(selectedMonthKey);
+    else if (!openMonthKey && grouped.monthKeys.length > 0) setOpenMonthKey(grouped.monthKeys[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMonthKey, grouped.monthKeys.join("|")]);
+
+  // -----------------------------
+  // READABLE TITLE HELPERS (FULL OPPONENT, DATE BELOW)
+  // -----------------------------
+  const parseOpponentFromFile = (file: string) => {
+    const base = file.replace(".csv", "");
+    const m = base.match(/^MGv([^_]+)[_-]/i);
+    return m ? m[1] : "Unknown";
+  };
+
+  const formatReadableDate = (file: string) => {
+    const d = parseFileDate(file);
+    if (!d) return "";
+    const monthNamesShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${monthNamesShort[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  };
+
+  const renderWarLabel = (file: string) => {
+    const outcome = warOutcomeByFile[file] || "?";
+    const opponent = parseOpponentFromFile(file);
+    const date = formatReadableDate(file);
+
+    const badge =
+      outcome === "W" ? (
+        <span className="text-[10px] font-bold text-green-300">W</span>
+      ) : outcome === "L" ? (
+        <span className="text-[10px] font-bold text-red-300">L</span>
+      ) : (
+        <span className="text-[10px] font-bold text-nw-parchment-soft/40">•</span>
+      );
+
+    return (
+      <div className="w-full">
+        {/* Line 1: MG vs Opponent (no ellipsis; allow horizontal scroll if needed) */}
+        <div
+          className="
+            flex items-center gap-2 whitespace-nowrap
+            overflow-x-auto
+            [-ms-overflow-style:none] [scrollbar-width:none]
+            [&::-webkit-scrollbar]:hidden
+          "
+        >
+          <span className="inline-flex w-4 justify-center shrink-0">{badge}</span>
+          <span className="text-[12px] font-semibold shrink-0">MG</span>
+          <span className="text-[12px] opacity-80 shrink-0">vs</span>
+          <span className="text-[12px] font-semibold shrink-0">{opponent}</span>
+        </div>
+
+        {/* Line 2: Date */}
+        {date && (
+          <div className="text-[10px] opacity-70 pl-6 leading-tight">
+            {date}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // -----------------------------------------------------
   // Animated Nav Button
@@ -203,7 +244,7 @@ export default function SideMenu({
     onClick,
   }: {
     active: boolean;
-    label: string;
+    label: React.ReactNode;
     onClick: () => void;
   }) => (
     <motion.button
@@ -289,14 +330,13 @@ export default function SideMenu({
 
         <NavButton
           active={view === "legacy"}
-          label=" Legacy Stats"
+          label="Legacy Stats"
           onClick={() => {
             setSelectedCSV("__none__");
             setView("legacy");
           }}
         />
 
-        {/* ✅ Grouped months (oldest -> newest), collapsed when not active */}
         {grouped.monthKeys.map((monthKey) => {
           const isOpen = openMonthKey === monthKey;
           const monthFiles = grouped.map.get(monthKey) || [];
@@ -333,7 +373,7 @@ export default function SideMenu({
                       <NavButton
                         key={file}
                         active={selectedCSV === file}
-                        label={formatWarLabelWithOutcome(file)}
+                        label={renderWarLabel(file)}
                         onClick={() => {
                           setSelectedCSV(file);
                           loadPublicCSV(file);
@@ -347,51 +387,6 @@ export default function SideMenu({
             </div>
           );
         })}
-
-        {/* Optional: files without parsable date */}
-        {grouped.ungrouped.length > 0 && (
-          <div className="mt-2">
-            <motion.button
-              onClick={() => setOpenMonthKey((prev) => (prev === "__other__" ? null : "__other__"))}
-              className="w-full text-left px-2 py-2 rounded border border-nw-gold/20 bg-black/20"
-              whileHover={{ x: 2 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-nw-parchment-soft/80 text-sm font-semibold">Other</span>
-                <span className="text-nw-parchment-soft/50 text-xs">
-                  {grouped.ungrouped.length}
-                </span>
-              </div>
-            </motion.button>
-
-            <AnimatePresence initial={false}>
-              {openMonthKey === "__other__" && (
-                <motion.div
-                  key="other-body"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="overflow-hidden pl-1 pt-1"
-                >
-                  {grouped.ungrouped.map((file) => (
-                    <NavButton
-                      key={file}
-                      active={selectedCSV === file}
-                      label={formatWarLabelWithOutcome(file)}
-                      onClick={() => {
-                        setSelectedCSV(file);
-                        loadPublicCSV(file);
-                        if (view === "overview" || view === "legacy") setView("dashboard");
-                      }}
-                    />
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
       </div>
     </aside>
   );
