@@ -50,13 +50,15 @@ export default function App() {
   // ⭐ Corrected destructuring – includes fullWarsByWar
   const {
     players,
+    enemyPlayers, // ✅ ADDED
     loadingCSV,
+
     csvFiles,
     selectedCSV,
     setSelectedCSV,
     loadPublicCSV,
     allPlayersByWar,
-    fullWarsByWar,        // <-- FIXED
+    fullWarsByWar, // <-- FIXED
     currentWar,
   } = useCSVLoader();
 
@@ -126,7 +128,6 @@ export default function App() {
         transition={{ duration: 0.35 }}
         className="md:ml-56 ml-0 max-w-[1800px] mx-auto px-4 py-5 space-y-6"
       >
-
         {/* OVERVIEW PAGE */}
         {view === "overview" && (
           <motion.div
@@ -134,9 +135,9 @@ export default function App() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
           >
-            <CompanyOverviewPage 
+            <CompanyOverviewPage
               allPlayersByWar={allPlayersByWar}
-              fullWarsByWar={fullWarsByWar}   // <-- FIXED
+              fullWarsByWar={fullWarsByWar} // <-- FIXED
             />
           </motion.div>
         )}
@@ -176,6 +177,7 @@ export default function App() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <WarLedgerTable
                   players={players}
+                  enemyPlayers={enemyPlayers} // ✅ ADDED
                   buildColors={buildColors}
                   onPlayerClick={(player) => {
                     setSelectedPlayer(player);
@@ -187,6 +189,7 @@ export default function App() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <ArmyGroupsPanel
                   players={players}
+                  enemyPlayers={enemyPlayers} // ✅ ADDED
                   buildColors={buildColors}
                   BUILD_PRIORITY={BUILD_PRIORITY}
                 />
@@ -214,26 +217,24 @@ export default function App() {
           )}
 
         {/* PLAYER PAGE */}
-{view === "player" && selectedPlayer && (
-  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-
-    {/* Player Profile Page */}
-    <PlayerProfilePage
-      player={selectedPlayer}
-      currentWar={selectedCSV}
-      allWars={csvFiles}
-      allPlayersByWar={allPlayersByWar}
-      fullWarsByWar={fullWarsByWar}
-      onBack={() => setView("dashboard")}
-      onSelectWar={async (war) => {
-        setSelectedCSV(war);
-        await loadPublicCSV(war);
-        setView("player");
-      }}
-    />
-
-  </motion.div>
-)}
+        {view === "player" && selectedPlayer && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* Player Profile Page */}
+            <PlayerProfilePage
+              player={selectedPlayer}
+              currentWar={selectedCSV}
+              allWars={csvFiles}
+              allPlayersByWar={allPlayersByWar}
+              fullWarsByWar={fullWarsByWar}
+              onBack={() => setView("dashboard")}
+              onSelectWar={async (war) => {
+                setSelectedCSV(war);
+                await loadPublicCSV(war);
+                setView("player");
+              }}
+            />
+          </motion.div>
+        )}
       </motion.main>
     </div>
   );
