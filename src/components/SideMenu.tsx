@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface SideMenuProps {
   csvFiles: string[];
@@ -26,7 +26,6 @@ export default function SideMenu({
   // ✅ CHANGE THIS if your CSVs live under a folder like "/wars/"
   const CSV_BASE_PATH = "/";
 
-  // Cache outcomes so we don't refetch repeatedly
   const [warOutcomeByFile, setWarOutcomeByFile] = React.useState<Record<string, WarOutcome>>({});
 
   const getCSVUrl = (file: string) => {
@@ -41,15 +40,9 @@ export default function SideMenu({
       .replace(/"/g, "")
       .trim();
 
-  /**
-   * Best-effort outcome extraction:
-   * 1) If there is a "result" column in the header, read the first data row's result value.
-   * 2) Else, search the entire file for keywords: win/victory vs loss/defeat.
-   */
   const extractOutcomeFromCSVText = (csvText: string): WarOutcome => {
     const text = normalize(csvText);
 
-    // Try to parse header/result column
     const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
     if (lines.length >= 2) {
       const header = lines[0].split(",").map((h) => normalize(h));
@@ -62,21 +55,17 @@ export default function SideMenu({
       }
     }
 
-    // Keyword scan fallback
     const hasWin = /\b(win|victory|won)\b/.test(text);
     const hasLoss = /\b(loss|defeat|lost)\b/.test(text);
 
     if (hasWin && !hasLoss) return "W";
     if (hasLoss && !hasWin) return "L";
-
-    // If both appear (or neither), we can't be sure
     return "?";
   };
 
-  // Fetch outcome for a single file (cached)
   const fetchOutcomeIfNeeded = React.useCallback(
     async (file: string) => {
-      if (warOutcomeByFile[file]) return; // already have it
+      if (warOutcomeByFile[file]) return;
 
       try {
         const url = getCSVUrl(file);
@@ -93,14 +82,12 @@ export default function SideMenu({
     [warOutcomeByFile]
   );
 
-  // Light-touch preload: fetch outcomes for visible list (sequential, avoids spike)
   React.useEffect(() => {
     let cancelled = false;
 
     const run = async () => {
       for (const file of csvFiles) {
         if (cancelled) return;
-        // Only fetch if not already cached
         if (!warOutcomeByFile[file]) {
           await fetchOutcomeIfNeeded(file);
         }
@@ -118,8 +105,94 @@ export default function SideMenu({
     const outcome = warOutcomeByFile[file] || "?";
     if (outcome === "W") return `W - ${base}`;
     if (outcome === "L") return `L - ${base}`;
-    return base; // unknown: don't prefix (or change to `? - ${base}` if you want)
+    return base;
   };
+
+  // -----------------------------
+  // DATE PARSING + GROUPING
+  // -----------------------------
+  const parseFileDate = (file: string): Date | null => {
+    const base = file.replace(".csv", "");
+    // Matches _MM-DD-YY or _MM-D-YY anywhere
+    const m = base.match(/(?:^|[_-])(\d{1,2})-(\d{1,2})-(\d{2})(?:$|[_-])/);
+    if (!m) return null;
+
+    const month = Number(m[1]);
+    const day = Number(m[2]);
+    const yy = Number(m[3]);
+    const year = 2000 + yy;
+
+    if (!month || month < 1 || month > 12 || !day || day < 1 || day > 31) return null;
+    return new Date(year, month - 1, day);
+  };
+
+  const monthKeyFromDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+  const monthLabelFromKey = (key: string) => {
+    const [y, m] = key.split("-");
+    const monthIndex = Number(m) - 1;
+    const monthNames = [
+      "January","February","March","April","May","June",
+      "July","August","September","October","November","December",
+    ];
+    return `${monthNames[monthIndex] || m} ${y}`;
+  };
+
+  const grouped = React.useMemo(() => {
+    const map = new Map<string, string[]>();
+    const ungrouped: string[] = [];
+
+    const compareFilesByDate = (a: string, b: string) => {
+      const da = parseFileDate(a);
+      const db = parseFileDate(b);
+      if (da && db) return da.getTime() - db.getTime();
+      if (da && !db) return -1;
+      if (!da && db) return 1;
+      return a.localeCompare(b);
+    };
+
+    for (const file of csvFiles) {
+      const d = parseFileDate(file);
+      if (!d) {
+        ungrouped.push(file);
+        continue;
+      }
+      const key = monthKeyFromDate(d);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(file);
+    }
+
+    for (const [k, arr] of map.entries()) {
+      arr.sort(compareFilesByDate);
+      map.set(k, arr);
+    }
+
+    const monthKeys = Array.from(map.keys()).sort((a, b) => a.localeCompare(b));
+    ungrouped.sort((a, b) => a.localeCompare(b));
+
+    return { map, monthKeys, ungrouped };
+  }, [csvFiles]);
+
+  // -----------------------------
+  // COLLAPSE/EXPAND MONTHS
+  // -----------------------------
+  const selectedMonthKey = React.useMemo(() => {
+    const d = selectedCSV ? parseFileDate(selectedCSV) : null;
+    return d ? monthKeyFromDate(d) : null;
+  }, [selectedCSV]);
+
+  const [openMonthKey, setOpenMonthKey] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    // Auto-open the month that contains the selected war (or the first month)
+    if (selectedMonthKey) {
+      setOpenMonthKey(selectedMonthKey);
+    } else if (!openMonthKey && grouped.monthKeys.length > 0) {
+      setOpenMonthKey(grouped.monthKeys[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMonthKey, grouped.monthKeys.join("|")]);
 
   // -----------------------------------------------------
   // Animated Nav Button
@@ -186,9 +259,7 @@ export default function SideMenu({
 
       {/* NAVIGATION */}
       <div className="mb-6">
-        <div className="text-nw-gold-soft text-lg font-bold mb-3">
-          Navigation
-        </div>
+        <div className="text-nw-gold-soft text-lg font-bold mb-3">Navigation</div>
 
         <NavButton
           active={view === "overview"}
@@ -214,11 +285,8 @@ export default function SideMenu({
 
       {/* WAR REPORTS */}
       <div>
-        <div className="text-nw-gold-soft text-lg font-bold mb-3">
-          War Reports
-        </div>
+        <div className="text-nw-gold-soft text-lg font-bold mb-3">War Reports</div>
 
-        {/* ---- Legacy Stats (NEW) ---- */}
         <NavButton
           active={view === "legacy"}
           label=" Legacy Stats"
@@ -228,19 +296,102 @@ export default function SideMenu({
           }}
         />
 
-        {/* CSV files */}
-        {csvFiles.map((file) => (
-          <NavButton
-            key={file}
-            active={selectedCSV === file}
-            label={formatWarLabelWithOutcome(file)}
-            onClick={() => {
-              setSelectedCSV(file);
-              loadPublicCSV(file);
-              if (view === "overview" || view === "legacy") setView("dashboard");
-            }}
-          />
-        ))}
+        {/* ✅ Grouped months (oldest -> newest), collapsed when not active */}
+        {grouped.monthKeys.map((monthKey) => {
+          const isOpen = openMonthKey === monthKey;
+          const monthFiles = grouped.map.get(monthKey) || [];
+
+          return (
+            <div key={monthKey} className="mb-2">
+              <motion.button
+                onClick={() => setOpenMonthKey((prev) => (prev === monthKey ? null : monthKey))}
+                className="w-full text-left px-2 py-2 rounded border border-nw-gold/20 bg-black/20"
+                whileHover={{ x: 2 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-nw-parchment-soft/80 text-sm font-semibold">
+                    {monthLabelFromKey(monthKey)}
+                  </span>
+                  <span className="text-nw-parchment-soft/50 text-xs">
+                    {monthFiles.length} war{monthFiles.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+              </motion.button>
+
+              <AnimatePresence initial={false}>
+                {isOpen && (
+                  <motion.div
+                    key={`${monthKey}-body`}
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="overflow-hidden pl-1 pt-1"
+                  >
+                    {monthFiles.map((file) => (
+                      <NavButton
+                        key={file}
+                        active={selectedCSV === file}
+                        label={formatWarLabelWithOutcome(file)}
+                        onClick={() => {
+                          setSelectedCSV(file);
+                          loadPublicCSV(file);
+                          if (view === "overview" || view === "legacy") setView("dashboard");
+                        }}
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
+
+        {/* Optional: files without parsable date */}
+        {grouped.ungrouped.length > 0 && (
+          <div className="mt-2">
+            <motion.button
+              onClick={() => setOpenMonthKey((prev) => (prev === "__other__" ? null : "__other__"))}
+              className="w-full text-left px-2 py-2 rounded border border-nw-gold/20 bg-black/20"
+              whileHover={{ x: 2 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-nw-parchment-soft/80 text-sm font-semibold">Other</span>
+                <span className="text-nw-parchment-soft/50 text-xs">
+                  {grouped.ungrouped.length}
+                </span>
+              </div>
+            </motion.button>
+
+            <AnimatePresence initial={false}>
+              {openMonthKey === "__other__" && (
+                <motion.div
+                  key="other-body"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="overflow-hidden pl-1 pt-1"
+                >
+                  {grouped.ungrouped.map((file) => (
+                    <NavButton
+                      key={file}
+                      active={selectedCSV === file}
+                      label={formatWarLabelWithOutcome(file)}
+                      onClick={() => {
+                        setSelectedCSV(file);
+                        loadPublicCSV(file);
+                        if (view === "overview" || view === "legacy") setView("dashboard");
+                      }}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </aside>
   );
