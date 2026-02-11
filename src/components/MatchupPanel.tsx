@@ -4,10 +4,20 @@ interface Props {
   attackers: string;
   defenders: string;
   result: string;
+  onResultComputed?: (isWin: boolean) => void; // ✅ added
 }
 
-export default function MatchupPanel({ attackers, defenders, result }: Props) {
+export default function MatchupPanel({
+  attackers,
+  defenders,
+  result,
+  onResultComputed,
+}: Props) {
   const isWin = ["win", "victory"].includes(result.toLowerCase());
+
+  React.useEffect(() => {
+    onResultComputed?.(isWin);
+  }, [isWin, onResultComputed]);
 
   return (
     <section className="nw-panel p-6 mb-6 text-center space-y-6">

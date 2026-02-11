@@ -47,6 +47,11 @@ export default function App() {
     null
   );
 
+  // ✅ added: tracks whether currently loaded war is a win/loss (undefined until computed)
+  const [selectedWarIsWin, setSelectedWarIsWin] = useState<boolean | undefined>(
+    undefined
+  );
+
   // ⭐ Corrected destructuring – includes fullWarsByWar
   const {
     players,
@@ -63,6 +68,11 @@ export default function App() {
 
   const { attackers, defenders, result } = useMatchup(players);
   const exportRef = useRef<HTMLDivElement | null>(null);
+
+  // ✅ added: reset W/L badge when war changes (until MatchupPanel recomputes)
+  useEffect(() => {
+    setSelectedWarIsWin(undefined);
+  }, [selectedCSV]);
 
   // Fix selected player when switching wars
   useEffect(() => {
@@ -109,6 +119,7 @@ export default function App() {
         loadPublicCSV={loadPublicCSV}
         view={view}
         setView={setView}
+        selectedWarIsWin={selectedWarIsWin} // ✅ added
       />
 
       <HeaderBar
@@ -163,6 +174,7 @@ export default function App() {
                   attackers={attackers}
                   defenders={defenders}
                   result={result}
+                  onResultComputed={setSelectedWarIsWin} // ✅ added
                 />
               </motion.div>
 
@@ -207,6 +219,7 @@ export default function App() {
                   attackers={attackers}
                   defenders={defenders}
                   result={result}
+                  onResultComputed={setSelectedWarIsWin} // ✅ added
                 />
               </motion.div>
 
