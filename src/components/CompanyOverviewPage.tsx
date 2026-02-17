@@ -167,7 +167,7 @@ export default function CompanyOverviewPage({ allPlayersByWar }: Props) {
       ====================================================== */}
       <div className="flex justify-end pr-2">
         <p className="text-xs text-nw-parchment-soft opacity-60 italic">
-          * Legacy stats and short wars are excluded from averages for consistency, some farm wars may be missing from total wins.
+          * Legacy stats and short wars are excluded from averages for consistency, some farm wars are missing from total wins.
         </p>
       </div>
 
