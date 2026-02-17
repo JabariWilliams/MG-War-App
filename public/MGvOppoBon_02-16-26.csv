@@ -1,7 +1,7 @@
 Rank,Group,Build,Player,Kills,Deaths,Assists,Healing,Damage,KP%,Defender,Attacker,Result,Full,Rank_1,Group_1,Build_1,Player_1,Kills_1,Deaths_1,Assists_1,Healing_1,Damage_1,KP%_1
 1,1,HEALS,Anoula,0,1,39,2157090,118231,24.84%,OppoBon,Mercguards,win,no,1,,,Marveel,0,1,26,2447696,221730,34.21%
 2,3,QDPS,NotWorkd,5,0,89,0,1002157,59.87%,,,,,2,,,Jaro,3,1,35,0,1109304,50.00%
-3,4,CW,Anvbis,7,0,57,0,1052745,40.76%,,,,,3,,,choke me papi,3,2,28,0,1012816,40.79%
+3,4,QDPS,Anvbis,7,0,57,0,1052745,40.76%,,,,,3,,,choke me papi,3,2,28,0,1012816,40.79%
 4,2,QDPS,mommi,2,4,43,0,1021048,28.66%,,,,,4,,,Akilleys III,2,2,28,0,900410,39.47%
 5,8,FS/X,Only Bruiser,3,2,73,0,863572,48.41%,,,,,5,,,grippy socks,4,3,29,9925,797487,43.42%
 6,5,QDPS,Buster,10,0,67,0,815863,49.04%,,,,,6,,,Voydx,3,5,18,0,738902,27.63%
@@ -25,7 +25,7 @@ Rank,Group,Build,Player,Kills,Deaths,Assists,Healing,Damage,KP%,Defender,Attacke
 24,2,BRUISER,Hattorii,4,4,69,620,467685,46.50%,,,,,24,,,iSuckDontHitMe,2,5,11,0,457863,17.11%
 25,7,DISRUPTOR,Luna-TerraLulu,3,3,25,0,487221,17.83%,,,,,25,,,Self Inflicted,0,4,28,0,441920,36.84%
 26,3,BRUISER,Guzy875,6,2,70,1589,443084,48.41%,,,,,26,,,Madmartigain,0,6,25,0,420095,32.89%
-27,6,DEX,Conval,3,0,47,0,482743,31.85%,,,,,27,,,oops I missed,2,6,16,0,414276,23.68%
+27,6,QDPS,Conval,3,0,47,0,482743,31.85%,,,,,27,,,oops I missed,2,6,16,0,414276,23.68%
 28,10,DISRUPTOR,Jayce Jackson,6,0,25,0,515637,19.75%,,,,,28,,,Beaudacious,3,4,11,0,412565,18.42%
 29,2,BRUISER,Yo Nature,0,5,60,0,420139,38.22%,,,,,29,,,Kirtaap,0,2,5,833156,5645,6.58%
 30,9,DISRUPTOR,LeFayPendragon,2,0,29,0,426468,19.75%,,,,,30,,,Half Heavy,6,6,5,0,432126,14.47%
