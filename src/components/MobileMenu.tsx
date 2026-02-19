@@ -1,3 +1,4 @@
+// src/components/MobileMenu.tsx
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -7,9 +8,11 @@ interface MobileMenuProps {
   csvFiles: string[];
   selectedCSV: string;
   setSelectedCSV: (val: string) => void;
-  loadPublicCSV: (file: string) => void;
-  view: "overview" | "dashboard" | "analytics" | "player" | "legacy";
-  setView: (val: "overview" | "dashboard" | "analytics" | "player" | "legacy") => void;
+  loadPublicCSV: (file: string) => Promise<void> | void;
+  view: "overview" | "dashboard" | "analytics" | "player" | "legacy" | "synergy";
+  setView: (val: "overview" | "dashboard" | "analytics" | "player" | "legacy" | "synergy") => void;
+  /** ✅ NEW: set this in App so Synergy can auto-load the current war */
+  setSynergyInitialWar?: (war: string) => void;
 }
 
 type WarOutcome = "W" | "L" | "?";
@@ -23,6 +26,7 @@ export default function MobileMenu({
   loadPublicCSV,
   view,
   setView,
+  setSynergyInitialWar,
 }: MobileMenuProps) {
   // ✅ CHANGE THIS if your CSVs live under a folder like "/wars/"
   const CSV_BASE_PATH = "/";
@@ -34,12 +38,7 @@ export default function MobileMenu({
     return `${base}${encodeURIComponent(file)}`;
   };
 
-  const normalize = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/\r/g, "")
-      .replace(/"/g, "")
-      .trim();
+  const normalize = (s: string) => s.toLowerCase().replace(/\r/g, "").replace(/"/g, "").trim();
 
   const extractOutcomeFromCSVText = (csvText: string): WarOutcome => {
     const text = normalize(csvText);
@@ -118,15 +117,24 @@ export default function MobileMenu({
     return new Date(year, month - 1, day);
   };
 
-  const monthKeyFromDate = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const monthKeyFromDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
   const monthLabelFromKey = (key: string) => {
     const [y, m] = key.split("-");
     const monthIndex = Number(m) - 1;
     const monthNames = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
     return `${monthNames[monthIndex] || m} ${y}`;
   };
@@ -194,7 +202,7 @@ export default function MobileMenu({
   const formatReadableDate = (file: string) => {
     const d = parseFileDate(file);
     if (!d) return "";
-    const monthNamesShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     return `${monthNamesShort[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   };
 
@@ -214,7 +222,6 @@ export default function MobileMenu({
 
     return (
       <div className="w-full">
-        {/* Line 1: MG vs Opponent (no ellipsis; allow horizontal scroll if needed) */}
         <div
           className="
             flex items-center gap-2 whitespace-nowrap
@@ -229,11 +236,19 @@ export default function MobileMenu({
           <span className="text-[12px] font-semibold shrink-0">{opponent}</span>
         </div>
 
-        {/* Line 2: Date */}
         {date && <div className="text-[10px] opacity-70 pl-6 leading-tight">{date}</div>}
       </div>
     );
   };
+
+  // ✅ helper: go synergy, and pass current war so synergy loads it
+  const goSynergyWithCurrentWar = React.useCallback(() => {
+    if (selectedCSV && selectedCSV !== "__none__") {
+      setSynergyInitialWar?.(selectedCSV);
+    }
+    setView("synergy");
+    setMobileMenuOpen(false);
+  }, [selectedCSV, setSynergyInitialWar, setView, setMobileMenuOpen]);
 
   return (
     <>
@@ -266,14 +281,8 @@ export default function MobileMenu({
       >
         {/* LOGO */}
         <div className="flex flex-col items-center mb-6 mt-2">
-          <img
-            src="/assets/mercguards-logo.png"
-            alt="Mercguards Logo"
-            className="w-20 opacity-90 drop-shadow-lg"
-          />
-          <p className="mt-2 text-nw-gold-soft font-semibold text-sm tracking-wide">
-            MERCGUARDS
-          </p>
+          <img src="/assets/mercguards-logo.png" alt="Mercguards Logo" className="w-20 opacity-90 drop-shadow-lg" />
+          <p className="mt-2 text-nw-gold-soft font-semibold text-sm tracking-wide">MERCGUARDS</p>
         </div>
 
         {/* NAVIGATION */}
@@ -287,9 +296,7 @@ export default function MobileMenu({
               setMobileMenuOpen(false);
             }}
             className={`block w-full text-left px-3 py-2 rounded mb-1 ${
-              view === "overview"
-                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-                : "text-nw-parchment-soft"
+              view === "overview" ? "bg-nw-gold-soft/20 text-nw-gold-soft" : "text-nw-parchment-soft"
             }`}
           >
             Overview
@@ -301,9 +308,7 @@ export default function MobileMenu({
               setMobileMenuOpen(false);
             }}
             className={`block w-full text-left px-3 py-2 rounded mb-1 ${
-              view === "dashboard"
-                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-                : "text-nw-parchment-soft"
+              view === "dashboard" ? "bg-nw-gold-soft/20 text-nw-gold-soft" : "text-nw-parchment-soft"
             }`}
           >
             Dashboard
@@ -315,12 +320,22 @@ export default function MobileMenu({
               setMobileMenuOpen(false);
             }}
             className={`block w-full text-left px-3 py-2 rounded ${
-              view === "analytics"
-                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-                : "text-nw-parchment-soft"
+              view === "analytics" ? "bg-nw-gold-soft/20 text-nw-gold-soft" : "text-nw-parchment-soft"
             }`}
           >
             Analytics
+          </button>
+
+          {/* ✅ Synergy: do NOT clear selectedCSV; pass it so Synergy loads that war */}
+          <button
+            onClick={() => {
+              goSynergyWithCurrentWar();
+            }}
+            className={`block w-full text-left px-3 py-2 rounded ${
+              view === "synergy" ? "bg-nw-gold-soft/20 text-nw-gold-soft" : "text-nw-parchment-soft"
+            }`}
+          >
+            Group Synergy
           </button>
         </div>
 
@@ -335,9 +350,7 @@ export default function MobileMenu({
               setMobileMenuOpen(false);
             }}
             className={`block w-full text-left px-3 py-2 rounded mb-1 ${
-              view === "legacy"
-                ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-                : "text-nw-parchment-soft"
+              view === "legacy" ? "bg-nw-gold-soft/20 text-nw-gold-soft" : "text-nw-parchment-soft"
             }`}
           >
             Legacy Stats
@@ -356,9 +369,7 @@ export default function MobileMenu({
                   transition={{ duration: 0.2 }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-nw-parchment-soft/80 text-sm font-semibold">
-                      {monthLabelFromKey(monthKey)}
-                    </span>
+                    <span className="text-nw-parchment-soft/80 text-sm font-semibold">{monthLabelFromKey(monthKey)}</span>
                     <span className="text-nw-parchment-soft/50 text-xs">
                       {monthFiles.length} war{monthFiles.length === 1 ? "" : "s"}
                     </span>
@@ -378,16 +389,14 @@ export default function MobileMenu({
                       {monthFiles.map((file) => (
                         <button
                           key={file}
-                          onClick={() => {
+                          onClick={async () => {
                             setSelectedCSV(file);
-                            loadPublicCSV(file);
+                            await loadPublicCSV(file);
                             setView("dashboard");
                             setMobileMenuOpen(false);
                           }}
                           className={`block w-full text-left px-3 py-2 rounded mb-1 ${
-                            selectedCSV === file
-                              ? "bg-nw-gold-soft/20 text-nw-gold-soft"
-                              : "text-nw-parchment-soft"
+                            selectedCSV === file ? "bg-nw-gold-soft/20 text-nw-gold-soft" : "text-nw-parchment-soft"
                           }`}
                         >
                           {renderWarRow(file)}

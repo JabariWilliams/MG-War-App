@@ -1,3 +1,4 @@
+// src/components/SideMenu.tsx
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -5,9 +6,11 @@ interface SideMenuProps {
   csvFiles: string[];
   selectedCSV: string;
   setSelectedCSV: (val: string) => void;
-  loadPublicCSV: (file: string) => void;
-  view: "overview" | "dashboard" | "analytics" | "player" | "legacy";
-  setView: (val: "overview" | "dashboard" | "analytics" | "player" | "legacy") => void;
+  loadPublicCSV: (file: string) => Promise<void> | void;
+  view: "overview" | "dashboard" | "analytics" | "player" | "legacy" | "synergy";
+  setView: (val: "overview" | "dashboard" | "analytics" | "player" | "legacy" | "synergy") => void;
+  /** ✅ NEW: set this in App so Synergy can auto-load the current war */
+  setSynergyInitialWar?: (war: string) => void;
 }
 
 type WarOutcome = "W" | "L" | "?";
@@ -19,6 +22,7 @@ export default function SideMenu({
   loadPublicCSV,
   view,
   setView,
+  setSynergyInitialWar,
 }: SideMenuProps) {
   // ✅ CHANGE THIS if your CSVs live under a folder like "/wars/"
   const CSV_BASE_PATH = "/";
@@ -30,12 +34,7 @@ export default function SideMenu({
     return `${base}${encodeURIComponent(file)}`;
   };
 
-  const normalize = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/\r/g, "")
-      .replace(/"/g, "")
-      .trim();
+  const normalize = (s: string) => s.toLowerCase().replace(/\r/g, "").replace(/"/g, "").trim();
 
   const extractOutcomeFromCSVText = (csvText: string): WarOutcome => {
     const text = normalize(csvText);
@@ -114,15 +113,24 @@ export default function SideMenu({
     return new Date(year, month - 1, day);
   };
 
-  const monthKeyFromDate = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const monthKeyFromDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
   const monthLabelFromKey = (key: string) => {
     const [y, m] = key.split("-");
     const monthIndex = Number(m) - 1;
     const monthNames = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
     return `${monthNames[monthIndex] || m} ${y}`;
   };
@@ -162,6 +170,22 @@ export default function SideMenu({
     return { map, monthKeys, ungrouped };
   }, [csvFiles]);
 
+  // ✅ helper: newest war file (by date, fallback lexicographic)
+  const getNewestWar = React.useCallback((): string | null => {
+    if (!csvFiles || csvFiles.length === 0) return null;
+
+    const scored = csvFiles
+      .map((f) => ({ f, d: parseFileDate(f)?.getTime() ?? null }))
+      .sort((a, b) => {
+        if (a.d != null && b.d != null) return b.d - a.d;
+        if (a.d != null && b.d == null) return -1;
+        if (a.d == null && b.d != null) return 1;
+        return b.f.localeCompare(a.f);
+      });
+
+    return scored[0]?.f ?? null;
+  }, [csvFiles]);
+
   // -----------------------------
   // COLLAPSE/EXPAND MONTHS
   // -----------------------------
@@ -190,7 +214,7 @@ export default function SideMenu({
   const formatReadableDate = (file: string) => {
     const d = parseFileDate(file);
     if (!d) return "";
-    const monthNamesShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     return `${monthNamesShort[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   };
 
@@ -210,7 +234,6 @@ export default function SideMenu({
 
     return (
       <div className="w-full">
-        {/* Line 1: MG vs Opponent (no ellipsis; allow horizontal scroll if needed) */}
         <div
           className="
             flex items-center gap-2 whitespace-nowrap
@@ -225,12 +248,7 @@ export default function SideMenu({
           <span className="text-[12px] font-semibold shrink-0">{opponent}</span>
         </div>
 
-        {/* Line 2: Date */}
-        {date && (
-          <div className="text-[10px] opacity-70 pl-6 leading-tight">
-            {date}
-          </div>
-        )}
+        {date && <div className="text-[10px] opacity-70 pl-6 leading-tight">{date}</div>}
       </div>
     );
   };
@@ -275,6 +293,26 @@ export default function SideMenu({
     </motion.button>
   );
 
+  // ✅ helper: go dashboard and ensure a war is loaded
+  const goDashboardEnsureWar = React.useCallback(async () => {
+    if (!selectedCSV || selectedCSV === "__none__") {
+      const newest = getNewestWar();
+      if (newest) {
+        setSelectedCSV(newest);
+        await loadPublicCSV(newest);
+      }
+    }
+    setView("dashboard");
+  }, [selectedCSV, getNewestWar, setSelectedCSV, loadPublicCSV, setView]);
+
+  // ✅ helper: go synergy, and pass current war so synergy loads it
+  const goSynergyWithCurrentWar = React.useCallback(() => {
+    if (selectedCSV && selectedCSV !== "__none__") {
+      setSynergyInitialWar?.(selectedCSV);
+    }
+    setView("synergy");
+  }, [selectedCSV, setSynergyInitialWar, setView]);
+
   return (
     <aside
       className="
@@ -288,14 +326,8 @@ export default function SideMenu({
     >
       {/* LOGO */}
       <div className="flex flex-col items-center mb-6 mt-2">
-        <img
-          src="/assets/mercguards-logo.png"
-          alt="Mercguards Logo"
-          className="w-28 opacity-90 drop-shadow-lg"
-        />
-        <p className="mt-2 text-nw-gold-soft font-semibold text-sm tracking-wide">
-          MERCGUARDS
-        </p>
+        <img src="/assets/mercguards-logo.png" alt="Mercguards Logo" className="w-28 opacity-90 drop-shadow-lg" />
+        <p className="mt-2 text-nw-gold-soft font-semibold text-sm tracking-wide">MERCGUARDS</p>
       </div>
 
       {/* NAVIGATION */}
@@ -311,16 +343,24 @@ export default function SideMenu({
           }}
         />
 
+        {/* ✅ Dashboard: ensure a war exists */}
         <NavButton
           active={view === "dashboard"}
           label="Dashboard"
-          onClick={() => setView("dashboard")}
+          onClick={() => {
+            void goDashboardEnsureWar();
+          }}
         />
 
+        <NavButton active={view === "analytics"} label="Analytics" onClick={() => setView("analytics")} />
+
+        {/* ✅ Synergy: do NOT clear selectedCSV; pass it so Synergy loads that war */}
         <NavButton
-          active={view === "analytics"}
-          label="Analytics"
-          onClick={() => setView("analytics")}
+          active={view === "synergy"}
+          label="Group Synergy"
+          onClick={() => {
+            goSynergyWithCurrentWar();
+          }}
         />
       </div>
 
@@ -350,9 +390,7 @@ export default function SideMenu({
                 transition={{ duration: 0.2 }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-nw-parchment-soft/80 text-sm font-semibold">
-                    {monthLabelFromKey(monthKey)}
-                  </span>
+                  <span className="text-nw-parchment-soft/80 text-sm font-semibold">{monthLabelFromKey(monthKey)}</span>
                   <span className="text-nw-parchment-soft/50 text-xs">
                     {monthFiles.length} war{monthFiles.length === 1 ? "" : "s"}
                   </span>
@@ -374,10 +412,12 @@ export default function SideMenu({
                         key={file}
                         active={selectedCSV === file}
                         label={renderWarLabel(file)}
-                        onClick={() => {
+                        onClick={async () => {
                           setSelectedCSV(file);
-                          loadPublicCSV(file);
-                          if (view === "overview" || view === "legacy") setView("dashboard");
+                          await loadPublicCSV(file);
+
+                          // ✅ always switch to dashboard when selecting a war
+                          if (view !== "dashboard") setView("dashboard");
                         }}
                       />
                     ))}

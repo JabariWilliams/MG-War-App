@@ -17,6 +17,7 @@ import AnalyticsPanel from "./components/analytics/AnalyticsPanel";
 import PlayerProfilePage from "./components/PlayerProfilePage";
 import CompanyOverviewPage from "./components/CompanyOverviewPage";
 import LegacyStatsPage from "./components/LegacyStatsPage";
+import GroupSynergyPage from "./components/GroupSynergyPage";
 
 import { EnhancedPlayer } from "./utils/csvParser";
 import { BUILD_PRIORITY, buildColors } from "./config/buildConfig";
@@ -39,7 +40,7 @@ import {
 
 export default function App() {
   const [view, setView] = useState<
-    "overview" | "dashboard" | "analytics" | "player" | "legacy"
+    "overview" | "dashboard" | "analytics" | "player" | "legacy" | "synergy"
   >("overview");
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -150,6 +151,18 @@ export default function App() {
             transition={{ duration: 0.4 }}
           >
             <LegacyStatsPage />
+          </motion.div>
+        )}
+
+        {/* GROUP SYNERGY PAGE */}
+        {view === "synergy" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <GroupSynergyPage
+              allPlayersByWar={allPlayersByWar}
+              fullWarsByWar={fullWarsByWar}
+              buildColors={buildColors}
+              initialWar={selectedCSV}   // ✅ baseline war auto-loads from current dashboard war
+            />
           </motion.div>
         )}
 
