@@ -17,6 +17,14 @@ function normName(s: string) {
   return (s || "").trim().toLowerCase();
 }
 
+// ===============================================
+// EXCLUSIONS (Lifetime Averages specific)
+// ===============================================
+// Remove MGvDII_02-26-26.csv ONLY from averages for:
+// Assists, Damage, Healing, KP%
+// (Kills/Deaths averaging remains based on full wars set)
+const EXCLUDE_FROM_SUPPORT_AVGS = new Set<string>(["MGvDII_02-26-26.csv"]);
+
 // -----------------------------
 // SIDE-MENU-LIKE WAR LABEL HELPERS (same as Group Synergy)
 // -----------------------------
@@ -301,32 +309,55 @@ export default function PlayerProfilePage({
 
   // ======================================================
   // B) LIFETIME AVERAGES — ONLY Full="yes" wars
+  //     BUT exclude MGvDII_02-26-26.csv from:
+  //     Assists / Damage / Healing / KP%
   // ======================================================
   const lifetime = useMemo(() => {
     const target = normName(player.Player);
 
+    // Full wars where this player appears
     const fullWarsPlayerWasIn = Object.keys(fullWarsByWar).filter((war) => {
       const list = fullWarsByWar[war] || [];
       return list.some((p) => normName(p.Player) === target);
     });
 
-    const relevant = fullWarsPlayerWasIn.map((w) => fullWarsByWar[w]).flat();
+    // For assists/dmg/heals/kp exclusion
+    const fullWarsForSupportAvgs = fullWarsPlayerWasIn.filter((w) => !EXCLUDE_FROM_SUPPORT_AVGS.has(w));
 
-    const matches = relevant.filter((p) => normName(p.Player) === target);
+    // Flatten data
+    const relevantAll = fullWarsPlayerWasIn.map((w) => fullWarsByWar[w]).flat();
+    const relevantSupport = fullWarsForSupportAvgs.map((w) => fullWarsByWar[w]).flat();
 
-    if (matches.length === 0) return null;
+    const matchesAll = relevantAll.filter((p) => normName(p.Player) === target);
+    if (matchesAll.length === 0) return null;
 
-    const total = (key: keyof EnhancedPlayer) =>
-      matches.reduce((a, b) => a + (Number(b[key]) || 0), 0);
+    const matchesSupport =
+      relevantSupport.filter((p) => normName(p.Player) === target);
+
+    // Helper sums
+    const totalFrom = (arr: EnhancedPlayer[], key: keyof EnhancedPlayer) =>
+      arr.reduce((a, b) => a + (Number((b as any)[key]) || 0), 0);
+
+    // K/D averages (unchanged behavior: based on ALL full wars the player was in)
+    const denomKD = Math.max(1, fullWarsPlayerWasIn.length);
+
+    // Support averages denom: based on filtered wars; if filtered is empty, fall back to all
+    const useSupportFallback = fullWarsForSupportAvgs.length === 0 || matchesSupport.length === 0;
+    const supportArr = useSupportFallback ? matchesAll : matchesSupport;
+    const denomSupportWars = Math.max(1, (useSupportFallback ? fullWarsPlayerWasIn.length : fullWarsForSupportAvgs.length));
+    const denomKP = Math.max(1, supportArr.length);
 
     return {
-      warsPlayed: warsPlayerWasIn.length, // ALL wars
-      avgKills: total("Kills") / Math.max(1, fullWarsPlayerWasIn.length),
-      avgDeaths: total("Deaths") / Math.max(1, fullWarsPlayerWasIn.length),
-      avgAssists: total("Assists") / Math.max(1, fullWarsPlayerWasIn.length),
-      avgDamage: total("Damage") / Math.max(1, fullWarsPlayerWasIn.length),
-      avgHealing: total("Healing") / Math.max(1, fullWarsPlayerWasIn.length),
-      avgKP: matches.reduce((a, b) => a + (Number(b.KP) || 0), 0) / Math.max(1, matches.length),
+      warsPlayed: warsPlayerWasIn.length, // ALL wars (unchanged)
+
+      avgKills: totalFrom(matchesAll, "Kills") / denomKD,
+      avgDeaths: totalFrom(matchesAll, "Deaths") / denomKD,
+
+      // These 4 are the ones you wanted MGvDII removed from:
+      avgAssists: totalFrom(supportArr, "Assists") / denomSupportWars,
+      avgDamage: totalFrom(supportArr, "Damage") / denomSupportWars,
+      avgHealing: totalFrom(supportArr, "Healing") / denomSupportWars,
+      avgKP: supportArr.reduce((a, b) => a + (Number((b as any).KP) || 0), 0) / denomKP,
     };
   }, [fullWarsByWar, player.Player, warsPlayerWasIn.length]);
 
@@ -343,7 +374,7 @@ export default function PlayerProfilePage({
       <h2 className="nw-title text-nw-gold-soft text-3xl">{player.Player}</h2>
 
       {/* ======================================================
-          LIFETIME (Corrected)
+          LIFETIME
       ====================================================== */}
       {lifetime ? (
         <div className="space-y-3">
@@ -364,7 +395,7 @@ export default function PlayerProfilePage({
       )}
 
       {/* ======================================================
-          WAR SWITCHER (now matches Baseline War picker style)
+          WAR SWITCHER (matches Baseline War picker style)
       ====================================================== */}
       <div className="space-y-3 mt-6">
         <label className="text-sm text-nw-parchment-soft block mb-1">
