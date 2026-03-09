@@ -806,6 +806,97 @@ export default function GroupSynergyPage({ allPlayersByWar, fullWarsByWar, build
     });
   }, [visibleWars, focusPlayerA, focusPlayerB, allPlayersByWar]);
 
+  // ✅ View mode: "overview" = all groups/all wars default, "synergy" = baseline synergy view
+  const [viewMode, setViewMode] = useState<"overview" | "synergy">("overview");
+
+  // ✅ All-groups-all-wars data for the Overview mode
+  const allGroupsData = useMemo(() => {
+    const rows: Array<{
+      war: string;
+      opponent: string;
+      date: string;
+      outcome: WarOutcome;
+      groups: Array<{
+        group: number;
+        kills: number;
+        deaths: number;
+        assists: number;
+        kd: number;
+        damage: number;
+        healing: number;
+        avgKP: number;
+        playerCount: number;
+      }>;
+    }> = [];
+
+    for (const war of visibleWars) {
+      const players = allPlayersByWar[war] || [];
+      const gm = groupMap(players);
+      const groups: typeof rows[0]["groups"] = [];
+
+      for (const [gnum, gplayers] of gm.entries()) {
+        const totals = computeTotals(gplayers);
+        const kd = totals.deaths > 0 ? totals.kills / totals.deaths : totals.kills > 0 ? 999 : 0;
+        groups.push({
+          group: gnum,
+          kills: totals.kills,
+          deaths: totals.deaths,
+          assists: totals.assists,
+          kd,
+          damage: totals.damage,
+          healing: totals.healing,
+          avgKP: totals.avgKP,
+          playerCount: gplayers.length,
+        });
+      }
+
+      groups.sort((a, b) => a.group - b.group);
+
+      if (groups.length > 0) {
+        rows.push({
+          war,
+          opponent: parseOpponentFromFile(war),
+          date: formatReadableDate(war),
+          outcome: outcomeByWar[war] || "?",
+          groups,
+        });
+      }
+    }
+
+    return rows;
+  }, [visibleWars, allPlayersByWar, outcomeByWar]);
+
+  // ✅ Aggregate K/D totals per group number across all wars
+  const groupTotalsAllWars = useMemo(() => {
+    const map = new Map<number, { kills: number; deaths: number; assists: number; warCount: number }>();
+
+    for (const war of visibleWars) {
+      const players = allPlayersByWar[war] || [];
+      const gm = groupMap(players);
+      for (const [gnum, gplayers] of gm.entries()) {
+        const totals = computeTotals(gplayers);
+        const existing = map.get(gnum) || { kills: 0, deaths: 0, assists: 0, warCount: 0 };
+        map.set(gnum, {
+          kills: existing.kills + totals.kills,
+          deaths: existing.deaths + totals.deaths,
+          assists: existing.assists + totals.assists,
+          warCount: existing.warCount + 1,
+        });
+      }
+    }
+
+    return [...map.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([group, t]) => ({
+        group,
+        kills: t.kills,
+        deaths: t.deaths,
+        assists: t.assists,
+        warCount: t.warCount,
+        kd: t.deaths > 0 ? t.kills / t.deaths : t.kills > 0 ? 999 : 0,
+      }));
+  }, [visibleWars, allPlayersByWar]);
+
   const fmtAvg = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : "X");
   const fmtInt = (n: number) => (Number.isFinite(n) ? Math.round(n).toLocaleString() : "X");
 
@@ -865,18 +956,227 @@ export default function GroupSynergyPage({ allPlayersByWar, fullWarsByWar, build
             <p className="text-nw-parchment-soft/60 text-xs mt-1">Some wars are missing due to no stats provided.</p>
           </div>
 
-          <div className="text-xs text-nw-parchment-soft/60 flex items-center gap-3">
-            <span>
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-xs text-nw-parchment-soft/60">
               Showing <span className="text-nw-gold-soft font-semibold">{visibleWars.length}</span>{" "}
               {warMode === "full" ? "full wars" : "wars (full + partial)"}
-            </span>
+            </div>
+            {/* ✅ View mode toggle */}
+            <div className="inline-flex rounded-full border border-nw-gold/20 bg-black/25 p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setViewMode("overview")}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                  viewMode === "overview"
+                    ? "bg-[rgba(198,155,91,0.25)] text-nw-gold-soft border border-nw-gold-soft/40"
+                    : "text-nw-parchment-soft/80 hover:bg-white/5"
+                }`}
+              >
+                All Groups Overview
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("synergy")}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                  viewMode === "synergy"
+                    ? "bg-[rgba(198,155,91,0.25)] text-nw-gold-soft border border-nw-gold-soft/40"
+                    : "text-nw-parchment-soft/80 hover:bg-white/5"
+                }`}
+              >
+                Baseline Synergy
+              </button>
+            </div>
           </div>
         </div>
 
         {/* ✅ Sticky scrolling pill toggle (shared state) */}
         <WarModePill warMode={warMode} setWarMode={setWarMode} sticky />
 
+        {/* ✅ All Groups Overview — default state */}
+        {viewMode === "overview" && (
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={`overview-${warMode}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="mt-5 space-y-4"
+            >
+              <p className="text-xs text-nw-parchment-soft/60">
+                K/D for every group in every war — newest first. Switch to{" "}
+                <button
+                  type="button"
+                  className="text-nw-gold-soft underline underline-offset-2"
+                  onClick={() => setViewMode("synergy")}
+                >
+                  Baseline Synergy
+                </button>{" "}
+                to compare a specific group across wars.
+              </p>
+
+              {/* ✅ Aggregate K/D totals per group across all wars */}
+              {groupTotalsAllWars.length > 0 && (
+                <div>
+                  <p className="text-xs uppercase text-nw-gold-soft/70 font-semibold mb-2 mt-1">
+                    All-Time Group K/D — {visibleWars.length} Wars Combined
+                  </p>
+                  <div className="overflow-x-auto">
+                    <div className="flex gap-3 flex-nowrap pb-1">
+                      {groupTotalsAllWars.map((g) => {
+                        const kdRatio = g.deaths > 0 ? (g.kills / g.deaths).toFixed(2) : g.kills > 0 ? "∞" : "0.00";
+                        const kdColor =
+                          g.kd >= 2 ? "text-green-400" : g.kd >= 1 ? "text-nw-gold-soft" : "text-red-400";
+                        return (
+                          <div
+                            key={g.group}
+                            className="flex-shrink-0 p-3 rounded-lg bg-black/30 border border-nw-gold/20 text-center min-w-[90px]"
+                          >
+                            <p className="text-[10px] uppercase text-nw-parchment-soft/50 mb-1">Group {g.group}</p>
+                            <p className="font-mono text-sm font-semibold text-nw-parchment-soft">
+                              {g.kills}/{g.deaths}
+                            </p>
+                            <p className={`font-mono text-lg font-bold ${kdColor}`}>{kdRatio}</p>
+                            <p className="text-[10px] text-nw-parchment-soft/40 mt-1">{g.warCount}w</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="min-w-full text-sm border-collapse">
+                  <thead className="nw-sticky-header text-left text-nw-gold-soft text-xs">
+                    <tr>
+                      <th className="py-2 pr-4 whitespace-nowrap">War</th>
+                      <th className="py-2 pr-3">Date</th>
+                      <th className="py-2 pr-3">Outcome</th>
+                      <th className="py-2 pr-3">Group</th>
+                      <th className="py-2 pr-3">K/D</th>
+                      <th className="py-2 pr-3">Assists</th>
+                      <th className="py-2 pr-3">KD Ratio</th>
+                      <th className="py-2 pr-3">DMG</th>
+                      <th className="py-2 pr-3">HEALS</th>
+                      <th className="py-2 pr-3">Avg KP%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allGroupsData.map((row) =>
+                      row.groups.map((g, gi) => {
+                        const kdRatio = g.deaths > 0 ? (g.kills / g.deaths).toFixed(2) : g.kills > 0 ? "∞" : "0.00";
+                        const kdColor =
+                          g.kd >= 2 ? "text-green-400" : g.kd >= 1 ? "text-nw-gold-soft" : "text-red-400";
+                        return (
+                          <tr
+                            key={`${row.war}-${g.group}`}
+                            className={`border-t border-nw-gold/10 hover:bg-white/5 ${
+                              gi === 0 ? "border-t-nw-gold/20" : ""
+                            }`}
+                          >
+                            {gi === 0 ? (
+                              <td className="px-3 py-2 font-semibold text-nw-parchment-soft/90 whitespace-nowrap" rowSpan={row.groups.length}>
+                                MG vs {row.opponent}
+                              </td>
+                            ) : null}
+                            {gi === 0 ? (
+                              <td className="px-3 py-2 text-nw-parchment-soft/60 text-xs whitespace-nowrap" rowSpan={row.groups.length}>
+                                {row.date}
+                              </td>
+                            ) : null}
+                            {gi === 0 ? (
+                              <td className="px-3 py-2" rowSpan={row.groups.length}>
+                                <span
+                                  className={`text-xs font-bold ${
+                                    row.outcome === "W"
+                                      ? "text-green-300"
+                                      : row.outcome === "L"
+                                      ? "text-red-300"
+                                      : "text-nw-parchment-soft/40"
+                                  }`}
+                                >
+                                  {row.outcome}
+                                </span>
+                              </td>
+                            ) : null}
+                            <td className="px-3 py-2 text-nw-gold-soft font-semibold">G{g.group}</td>
+                            <td className="px-3 py-2 font-mono">
+                              {g.kills}/{g.deaths}
+                            </td>
+                            <td className="px-3 py-2">{g.assists}</td>
+                            <td className={`px-3 py-2 font-semibold font-mono ${kdColor}`}>{kdRatio}</td>
+                            <td className="px-3 py-2">{g.damage.toLocaleString()}</td>
+                            <td className="px-3 py-2">{g.healing.toLocaleString()}</td>
+                            <td className="px-3 py-2">{g.avgKP.toFixed(1)}%</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                    {allGroupsData.length === 0 && (
+                      <tr>
+                        <td colSpan={10} className="px-3 py-4 text-nw-parchment-soft/60">
+                          No wars found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-4">
+                {allGroupsData.map((row) => (
+                  <div key={row.war} className="p-3 rounded-lg bg-black/30 border border-nw-gold-soft/20">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div>
+                        <p className="text-nw-gold-soft font-semibold text-sm">MG vs {row.opponent}</p>
+                        <p className="text-xs text-nw-parchment-soft/60">{row.date}</p>
+                      </div>
+                      <span
+                        className={`text-xs font-bold px-2 py-0.5 rounded ${
+                          row.outcome === "W"
+                            ? "text-green-300 bg-green-900/30"
+                            : row.outcome === "L"
+                            ? "text-red-300 bg-red-900/30"
+                            : "text-nw-parchment-soft/40"
+                        }`}
+                      >
+                        {row.outcome}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {row.groups.map((g) => {
+                        const kdRatio = g.deaths > 0 ? (g.kills / g.deaths).toFixed(2) : g.kills > 0 ? "∞" : "0.00";
+                        const kdColor =
+                          g.kd >= 2 ? "text-green-400" : g.kd >= 1 ? "text-nw-gold-soft" : "text-red-400";
+                        return (
+                          <div key={g.group} className="bg-black/20 rounded p-2 border border-nw-gold/10">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-nw-gold-soft font-semibold text-xs">Group {g.group}</span>
+                              <span className={`font-mono font-bold text-sm ${kdColor}`}>
+                                {g.kills}/{g.deaths} ({kdRatio})
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1 text-xs text-nw-parchment-soft/70">
+                              <span>AST: {g.assists}</span>
+                              <span>KP: {g.avgKP.toFixed(1)}%</span>
+                              <span>DMG: {(g.damage / 1000).toFixed(0)}k</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        )}
+
         {/* ✅ Smooth transition when warMode changes */}
+        {viewMode === "synergy" && (
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={`top-${warMode}`}
@@ -942,9 +1242,11 @@ export default function GroupSynergyPage({ allPlayersByWar, fullWarsByWar, build
             )}
           </motion.div>
         </AnimatePresence>
+        )}
       </div>
 
-      {/* GROUP HISTORY */}
+      {/* GROUP HISTORY — only shown in synergy mode */}
+      {viewMode === "synergy" && (
       <div className="nw-panel p-5">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h3 className="nw-title text-nw-gold-soft text-lg">Group History (Best Match per War)</h3>
@@ -1048,8 +1350,10 @@ export default function GroupSynergyPage({ allPlayersByWar, fullWarsByWar, build
           </motion.div>
         </AnimatePresence>
       </div>
+      )}
 
-      {/* PLAYER PAIR */}
+      {/* PLAYER PAIR — only shown in synergy mode */}
+      {viewMode === "synergy" && (
       <div className="nw-panel p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <h3 className="nw-title text-nw-gold-soft text-lg">Player Pair: Together vs Not Together</h3>
@@ -1290,7 +1594,7 @@ export default function GroupSynergyPage({ allPlayersByWar, fullWarsByWar, build
           </motion.div>
         </AnimatePresence>
       </div>
+      )}
     </motion.section>
   );
 }
-
