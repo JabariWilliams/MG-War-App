@@ -950,8 +950,8 @@ export default function GroupSynergyPage({ allPlayersByWar, fullWarsByWar, build
           <div className="space-y-1">
             <h2 className="nw-title text-nw-gold-soft text-2xl">Group Synergy</h2>
             <p className="text-nw-parchment-soft/80 text-sm">
-              Toggle war scope: <span className="text-nw-gold-soft font-semibold">Full only "(30MIN ATK or DEF)"</span> vs{" "}
-              <span className="text-nw-gold-soft font-semibold">Full + Partial "(WAR < 20MIN)" </span>. Compare a baseline group against other wars.
+              Toggle war scope: <span className="text-nw-gold-soft font-semibold">Full only | 30MIN ATK or DEF</span> vs{" "}
+              <span className="text-nw-gold-soft font-semibold">Full + Partial | WAR < 20MIN </span>. Compare a baseline group against other wars.
             </p>
             <p className="text-nw-parchment-soft/60 text-xs mt-1">Some wars are missing due to no stats provided.</p>
           </div>
